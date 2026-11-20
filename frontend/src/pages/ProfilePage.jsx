@@ -122,7 +122,7 @@ const ProfilePage = () => {
             Your Global Language Passport
           </h1>
           <p className="text-xs text-base-content/80 max-w-xl font-medium">
-            Customize how language partners see you across hiMEstream. Edit your native language, target goals, and bio.
+            Customize how language partners see you across LinguaLoom. Edit your native language, target goals, and bio.
           </p>
         </div>
       </section>

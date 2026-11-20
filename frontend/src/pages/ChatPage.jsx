@@ -38,10 +38,30 @@ import ChatRightDrawer from "../components/chat/ChatRightDrawer.jsx";
 import CustomAttachment from "../components/chat/CustomAttachment.jsx";
 
 const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
+const ACTIVE_CHAT_STORAGE_KEY = "hime-active-chat-id";
+
+const readStoredChatId = () => {
+  try {
+    return window.sessionStorage.getItem(ACTIVE_CHAT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const storeChatId = (chatId) => {
+  try {
+    window.sessionStorage.setItem(ACTIVE_CHAT_STORAGE_KEY, chatId);
+  } catch {
+    // Keep chat navigation working when browser storage is unavailable.
+  }
+};
 
 const ChatPage = () => {
-  const { id: targetUserId } = useParams();
+  const { id: routeTargetUserId } = useParams();
   const navigate = useNavigate();
+  const [targetUserId, setTargetUserId] = useState(
+    () => routeTargetUserId || readStoredChatId()
+  );
 
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
@@ -49,6 +69,13 @@ const ChatPage = () => {
 
   // Group vs Direct Detection
   const isGroup = Boolean(targetUserId?.startsWith("group-"));
+
+  useEffect(() => {
+    if (!routeTargetUserId) return;
+    storeChatId(routeTargetUserId);
+    setTargetUserId(routeTargetUserId);
+    navigate("/chat", { replace: true });
+  }, [routeTargetUserId, navigate]);
 
   // UI Panels state (Pane 1 mobile drawer, Pane 3 partner/group vault)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -133,7 +160,7 @@ const ChatPage = () => {
     enabled: isGroup && !!targetUserId,
   });
 
-  // Auto-redirect to first chat if visiting /chat without an id
+  // Select the first available chat without putting its ID in the URL.
   useEffect(() => {
     if (!targetUserId) {
       if (chatHistory.length > 0) {
@@ -141,12 +168,16 @@ const ChatPage = () => {
         const nextId = firstChat.isGroup
           ? firstChat.channelId
           : firstChat.otherUser?.id;
-        if (nextId) navigate(`/chat/${nextId}`, { replace: true });
+        if (nextId) {
+          storeChatId(nextId);
+          setTargetUserId(nextId);
+        }
       } else if (friends.length > 0) {
-        navigate(`/chat/${friends[0]._id}`, { replace: true });
+        storeChatId(friends[0]._id);
+        setTargetUserId(friends[0]._id);
       }
     }
-  }, [targetUserId, chatHistory, friends, navigate]);
+  }, [targetUserId, chatHistory, friends]);
 
   // Aggregate group metadata
   const groupData = useMemo(() => {

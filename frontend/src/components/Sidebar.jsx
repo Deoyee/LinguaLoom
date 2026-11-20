@@ -58,14 +58,14 @@ const Sidebar = () => {
           >
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-primary-content shadow-lg shadow-primary/25">
               <img
-                src="/logo.png"
-                alt="hiMEStream logo"
+                src="/lingualoom-mark.svg"
+                alt="LinguaLoom"
                 className="w-6 h-6 object-contain"
               />
             </div>
             <div>
               <span className="text-xl font-extrabold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-wider block leading-tight">
-                hiMEStream
+                LinguaLoom
               </span>
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-base-content/60">
                 Language Hub

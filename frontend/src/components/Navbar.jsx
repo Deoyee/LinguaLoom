@@ -64,13 +64,13 @@ const Navbar = ({ showSidebar = false }) => {
                 showSidebar ? "flex lg:hidden" : "flex"
               }`}
             >
-              <img src="/logo.png" alt="hiMEStream logo" className="w-7 h-7 object-contain" />
+              <img src="/lingualoom-mark.svg" alt="LinguaLoom" className="w-7 h-7 object-contain" />
               <span
                 className={`${
                   isChatPage ? "hidden sm:inline-block" : "inline-block"
                 } text-xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-wider`}
               >
-                hiMEStream
+                LinguaLoom
               </span>
             </Link>
           </div>
@@ -163,9 +163,9 @@ const Navbar = ({ showSidebar = false }) => {
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center gap-2.5"
                 >
-                  <img src="/logo.png" alt="hiMEStream logo" className="w-8 h-8 object-contain" />
+                  <img src="/lingualoom-mark.svg" alt="LinguaLoom" className="w-8 h-8 object-contain" />
                   <span className="text-xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-wider">
-                    hiMEStream
+                    LinguaLoom
                   </span>
                 </Link>
 

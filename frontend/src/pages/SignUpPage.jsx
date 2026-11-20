@@ -29,9 +29,9 @@ const SignUpPage = () => {
         <div className="w-full lg:w-1/2 p-4 sm:p-8 flex flex-col justify-center">
           {/* logo */}
           <div className="mb-4 flex items-center justify-start gap-2">
-            <img src="/logo.png" alt="hiMEStream logo" className="w-9 h-9 object-contain" />
+            <img src="/lingualoom-mark.svg" alt="LinguaLoom" className="w-9 h-9 object-contain" />
             <span className="text-3xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-wider">
-              hiMEStream
+              LinguaLoom
             </span>
           </div>
 
@@ -48,7 +48,7 @@ const SignUpPage = () => {
                 <div>
                   <h2 className="text-xl font-semibold">Create an Account</h2>
                   <p className="text-sm opacity-70">
-                    Join hiMEStream and start your streaming adventure!
+                    Join LinguaLoom and start building your language confidence.
                   </p>
                 </div>
 

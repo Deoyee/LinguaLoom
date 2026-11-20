@@ -50,7 +50,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 app.listen(PORT, () => {
-    console.log("hiMEStream Server Running", PORT);
+    console.log("LinguaLoom Server Running", PORT);
     connectDB();
 });
-// Nodemon reloaded for mail configuration
+// Nodemon reloaded for mail configuration

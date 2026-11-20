@@ -396,16 +396,7 @@ const HomePage = () => {
 
             {/* Bottom Action Strip */}
             <div className="flex items-center gap-3 pt-5 mt-4 border-t border-base-content/10 z-10 flex-wrap">
-              {firstChatUserId ? (
-                <button
-                  type="button"
-                  onClick={() => navigate(`/chat/${firstChatUserId}`)}
-                  className="btn btn-primary btn-sm rounded-2xl font-bold shadow-md shadow-primary/25 gap-2 transition-transform active:scale-95"
-                >
-                  <MessageCircleIcon className="size-4" />
-                  <span>Jump into Practice Chat</span>
-                </button>
-              ) : (
+              {!firstChatUserId && (
                 <button
                   type="button"
                   onClick={() => {

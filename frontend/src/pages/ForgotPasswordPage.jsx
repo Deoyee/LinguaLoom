@@ -104,9 +104,9 @@ const ForgotPasswordPage = () => {
           <div>
             {/* Logo */}
             <div className="mb-6 flex items-center justify-start gap-2">
-              <img src="/logo.png" alt="hiMEStream logo" className="w-9 h-9 object-contain" />
+              <img src="/lingualoom-mark.svg" alt="LinguaLoom" className="w-9 h-9 object-contain" />
               <span className="text-3xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-wider">
-                hiMEStream
+                LinguaLoom
               </span>
             </div>
 
@@ -324,7 +324,7 @@ const ForgotPasswordPage = () => {
             <div className="text-center space-y-3 mt-6">
               <h3 className="text-xl font-semibold">Account Recovery Made Easy</h3>
               <p className="text-sm opacity-70">
-                Keep your hiMEStream account secure while easily regaining access whenever you need it.
+                Keep your LinguaLoom account secure while easily regaining access whenever you need it.
               </p>
             </div>
           </div>

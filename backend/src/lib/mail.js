@@ -100,8 +100,8 @@ export async function sendPasswordResetEmail(toEmail, otp) {
                         <!-- Brand Header -->
                         <tr>
                             <td style="padding: 32px 32px 20px; text-align: center; border-bottom: 1px solid #1e293b;">
-                                <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #38bdf8;">hiMEStream</h1>
-                                <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">Language Exchange & Video Streaming</p>
+                                <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #34d399;">LinguaLoom</h1>
+                                <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">Language Learning & Global Conversation</p>
                             </td>
                         </tr>
                         
@@ -125,7 +125,7 @@ export async function sendPasswordResetEmail(toEmail, otp) {
                                 </p>
                                 
                                 <div style="border-top: 1px solid #1e293b; padding-top: 20px; margin-top: 24px; font-size: 12px; color: #64748b; text-align: center;">
-                                    Never share this verification code with anyone. hiMEStream will never ask for your code.
+                                    Never share this verification code with anyone. LinguaLoom will never ask for your code.
                                 </div>
                             </td>
                         </tr>
@@ -137,7 +137,7 @@ export async function sendPasswordResetEmail(toEmail, otp) {
     </html>
     `;
 
-    const textContent = `hiMEStream Password Reset\n\nYour verification code is: ${otp}\n\nThis code will expire in 15 minutes.\n\nIf you did not request this reset, you can safely ignore this email.`;
+    const textContent = `LinguaLoom Password Reset\n\nYour verification code is: ${otp}\n\nThis code will expire in 15 minutes.\n\nIf you did not request this reset, you can safely ignore this email.`;
 
     // OPTION 1: Resend HTTP API (Recommended for Render & cloud hosts - uses Port 443 HTTPS, bypasses all SMTP port blocks)
     if (process.env.RESEND_API_KEY) {
@@ -153,7 +153,7 @@ export async function sendPasswordResetEmail(toEmail, otp) {
             body: JSON.stringify({
                 from: fromAddress,
                 to: [toEmail],
-                subject: "Your hiMEStream Password Reset Code",
+                subject: "Your LinguaLoom Password Reset Code",
                 html: htmlContent,
                 text: textContent,
             }),
@@ -186,9 +186,9 @@ export async function sendPasswordResetEmail(toEmail, otp) {
                 "Accept": "application/json",
             },
             body: JSON.stringify({
-                sender: { name: "hiMEStream", email: senderEmail },
+                sender: { name: "LinguaLoom", email: senderEmail },
                 to: [{ email: toEmail }],
-                subject: "Your hiMEStream Password Reset Code",
+                subject: "Your LinguaLoom Password Reset Code",
                 htmlContent: htmlContent,
                 textContent: textContent,
             }),
@@ -206,13 +206,13 @@ export async function sendPasswordResetEmail(toEmail, otp) {
 
     // OPTION 3: Standard SMTP / Gmail (with IPv4 forced)
     const mailer = await getTransporter();
-    const fromAddress = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `"hiMEStream" <${process.env.SMTP_USER}>` : '"hiMEStream" <no-reply@himestream.com>');
+    const fromAddress = process.env.EMAIL_FROM || (process.env.SMTP_USER ? `"LinguaLoom" <${process.env.SMTP_USER}>` : '"LinguaLoom" <no-reply@himestream.com>');
 
     try {
         const info = await mailer.sendMail({
             from: fromAddress,
             to: toEmail,
-            subject: "Your hiMEStream Password Reset Code",
+            subject: "Your LinguaLoom Password Reset Code",
             text: textContent,
             html: htmlContent,
         });
