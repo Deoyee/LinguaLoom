@@ -142,6 +142,7 @@ export async function createGroupChannel(req, res) {
     await channel.sendMessage({
       text: `🎉 Welcome to ${name.trim()}! Start practicing together.`,
       system: true,
+      user_id: currentUserId,
     });
 
     res.status(201).json({
@@ -208,6 +209,7 @@ export async function addGroupMembers(req, res) {
     await channel.sendMessage({
       text: `👋 ${names} joined the group!`,
       system: true,
+      user_id: userId,
     });
 
     const updatedMemberIds = Object.keys(channel.state.members || {});
@@ -236,7 +238,11 @@ export async function removeGroupMember(req, res) {
       return res.status(404).json({ message: "Member not found in this group" });
     }
 
-    await channel.sendMessage({ text: `A member was removed from ${channel.data.name || "the group"}.`, system: true });
+    await channel.sendMessage({
+      text: `A member was removed from ${channel.data.name || "the group"}.`,
+      system: true,
+      user_id: userId,
+    });
     await channel.removeMembers([String(memberId)]);
     res.status(200).json({ success: true });
   } catch (error) {
@@ -256,7 +262,11 @@ export async function leaveGroup(req, res) {
       return res.status(409).json({ message: "Promote another admin or delete the group before leaving" });
     }
 
-    await channel.sendMessage({ text: "A member left the group.", system: true });
+    await channel.sendMessage({
+      text: "A member left the group.",
+      system: true,
+      user_id: userId,
+    });
     await channel.removeMembers([userId]);
     res.status(200).json({ success: true });
   } catch (error) {
@@ -296,6 +306,7 @@ export async function updateGroupMemberRole(req, res) {
     await channel.sendMessage({
       text: `${user?.fullName || "A member"} is now a group ${role}.`,
       system: true,
+      user_id: userId,
     });
     res.status(200).json({ success: true, role });
   } catch (error) {
