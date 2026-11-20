@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { ArrowLeft, EyeIcon, EyeOffIcon, KeyRound, Mail, CheckCircle2, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { forgotPassword, resetPassword } from "../lib/api";
+import AuthLayout from "../components/AuthLayout.jsx";
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -93,245 +94,166 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div
-      className="min-h-dvh w-full flex items-stretch justify-center"
-      data-theme="forest"
+    <AuthLayout
+      storyTitle="Your next conversation is still waiting."
+      storyDescription="Reset your password securely and get back to learning with language partners around the world."
     >
-      <div className="flex min-h-dvh w-full flex-col bg-base-100 lg:flex-row overflow-hidden">
-        
-        {/* Form Container */}
-        <div className="w-full lg:w-1/2 p-6 sm:p-10 flex flex-col justify-between">
-          <div>
-            {/* Logo */}
-            <div className="mb-6 flex items-center justify-start gap-2">
-              <img src="/lingualoom-mark.svg" alt="LinguaLoom" className="w-9 h-9 object-contain" />
-              <span className="text-3xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-wider">
-                LinguaLoom
-              </span>
-            </div>
-
-            {/* Error banner */}
-            {error && (
-              <div className="alert alert-error mb-6 py-2 px-4 text-sm">
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Step 1: Request OTP */}
-            {step === 1 && (
-              <div>
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold">Forgot Password?</h2>
-                  <p className="text-sm opacity-70 mt-1">
-                    No worries! Enter your registered email address below and we'll help you reset your password.
-                  </p>
-                </div>
-
-                <form onSubmit={handleRequestOtp} className="space-y-5">
-                  <div className="form-control w-full space-y-2">
-                    <label className="label p-0">
-                      <span className="label-text font-medium">Email Address</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        placeholder="hello@example.com"
-                        className="input input-bordered w-full pl-10"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        autoFocus
-                      />
-                      <Mail className="size-5 absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="btn btn-primary w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <span className="loading loading-spinner loading-xs"></span>
-                        Sending Code...
-                      </>
-                    ) : (
-                      "Send Verification Code"
-                    )}
-                  </button>
-                </form>
-              </div>
-            )}
-
-            {/* Step 2: Enter OTP & New Password */}
-            {step === 2 && (
-              <div>
-                <div className="mb-6">
-                  <div className="inline-flex items-center gap-1.5 text-xs text-primary font-medium bg-primary/10 px-2.5 py-1 rounded-full mb-2">
-                    <CheckCircle2 className="size-3.5" />
-                    Code sent to {email}
-                  </div>
-                  <h2 className="text-2xl font-bold">Reset Password</h2>
-                  <p className="text-sm opacity-70 mt-1">
-                    Please check your email inbox (and spam folder) for the 6-digit verification code.
-                  </p>
-                </div>
-
-                <form onSubmit={handleResetPassword} className="space-y-4">
-                  {/* OTP Code */}
-                  <div className="form-control w-full space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="label p-0">
-                        <span className="label-text font-medium">Verification Code</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handleResendOtp}
-                        disabled={isLoading}
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                      >
-                        <RefreshCw className="size-3" />
-                        Resend Code
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        maxLength={6}
-                        placeholder="123456"
-                        className="input input-bordered w-full pl-10 font-mono tracking-widest text-center sm:text-left"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                        required
-                        autoFocus
-                      />
-                      <KeyRound className="size-5 absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
-                    </div>
-                  </div>
-
-                  {/* New Password */}
-                  <div className="form-control w-full space-y-1">
-                    <label className="label p-0">
-                      <span className="label-text font-medium">New Password</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        className="input input-bordered w-full pr-10"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-base-content/60 hover:text-base-content transition-colors focus:outline-none"
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? (
-                          <EyeOffIcon className="size-5" />
-                        ) : (
-                          <EyeIcon className="size-5" />
-                        )}
-                      </button>
-                    </div>
-                    <span className="text-xs opacity-60">At least 6 characters</span>
-                  </div>
-
-                  {/* Confirm New Password */}
-                  <div className="form-control w-full space-y-1">
-                    <label className="label p-0">
-                      <span className="label-text font-medium">Confirm New Password</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        className="input input-bordered w-full pr-10"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-base-content/60 hover:text-base-content transition-colors focus:outline-none"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOffIcon className="size-5" />
-                        ) : (
-                          <EyeIcon className="size-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="btn btn-primary w-full mt-2"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <span className="loading loading-spinner loading-xs"></span>
-                        Resetting Password...
-                      </>
-                    ) : (
-                      "Reset Password"
-                    )}
-                  </button>
-
-                  <div className="text-center pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setStep(1)}
-                      className="text-xs text-base-content/70 hover:text-base-content underline"
-                    >
-                      Use a different email address
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-
-          {/* Back to sign in link */}
-          <div className="text-center pt-8 border-t border-base-200 mt-6">
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 text-sm text-primary hover:underline transition-colors"
-            >
-              <ArrowLeft className="size-4" />
-              Back to Sign In
-            </Link>
-          </div>
+      {error && (
+        <div role="alert" className="mb-5 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+          {error}
         </div>
+      )}
 
-        {/* Right side illustration and message */}
-        <div className="hidden lg:flex w-full lg:w-1/2 bg-primary/10 items-center justify-center">
-          <div className="max-w-md p-8">
-            <div className="relative aspect-square max-w-sm mx-auto">
-              <img
-                src="/signUp.png"
-                alt="Password security illustration"
-                className="w-full h-full object-contain"
+      {step === 1 ? (
+        <form onSubmit={handleRequestOtp} className="space-y-6">
+          <div>
+            <h1 className="font-serif text-4xl font-semibold">Reset your password.</h1>
+            <p className="mt-2 text-sm text-base-content/60">
+              Enter the email linked to your account and we’ll send a verification code.
+            </p>
+          </div>
+
+          <div className="form-control w-full">
+            <label htmlFor="recovery-email" className="mb-2 text-xs font-semibold text-base-content/75">
+              Email address
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-base-content/45" />
+              <input
+                id="recovery-email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                className="input input-bordered h-12 w-full rounded-xl border-base-content/15 bg-base-200/30 pl-11 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
               />
             </div>
+          </div>
 
-            <div className="text-center space-y-3 mt-6">
-              <h3 className="text-xl font-semibold">Account Recovery Made Easy</h3>
-              <p className="text-sm opacity-70">
-                Keep your LinguaLoom account secure while easily regaining access whenever you need it.
-              </p>
+          <button type="submit" className="btn btn-primary h-12 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/20" disabled={isLoading}>
+            {isLoading ? <><span className="loading loading-spinner loading-xs" />Sending code...</> : "Send verification code"}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="mb-5">
+            <span className="mb-3 inline-flex max-w-full items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success">
+              <CheckCircle2 className="size-4 shrink-0" />
+              <span className="truncate">Code sent to {email}</span>
+            </span>
+            <h1 className="font-serif text-4xl font-semibold">Choose a new password.</h1>
+            <p className="mt-2 text-sm text-base-content/60">
+              Enter the six-digit code and choose a password with at least six characters.
+            </p>
+          </div>
+
+          <div className="form-control w-full">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label htmlFor="recovery-code" className="text-xs font-semibold text-base-content/75">
+                Verification code
+              </label>
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={isLoading}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+              >
+                <RefreshCw className="size-3.5" /> Resend code
+              </button>
+            </div>
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-base-content/45" />
+              <input
+                id="recovery-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="000000"
+                className="input input-bordered h-12 w-full rounded-xl border-base-content/15 bg-base-200/30 pl-11 font-mono tracking-[0.3em] focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                required
+                autoFocus
+              />
             </div>
           </div>
-        </div>
 
+          <div className="form-control w-full">
+            <label htmlFor="new-password" className="mb-2 text-xs font-semibold text-base-content/75">
+              New password
+            </label>
+            <div className="relative">
+              <input
+                id="new-password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder="At least 6 characters"
+                className="input input-bordered h-12 w-full rounded-xl border-base-content/15 bg-base-200/30 pr-12 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="btn btn-ghost btn-circle btn-sm absolute right-1 top-1/2 -translate-y-1/2 text-base-content/55"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="form-control w-full">
+            <label htmlFor="confirm-password" className="mb-2 text-xs font-semibold text-base-content/75">
+              Confirm new password
+            </label>
+            <div className="relative">
+              <input
+                id="confirm-password"
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder="Re-enter your password"
+                className="input input-bordered h-12 w-full rounded-xl border-base-content/15 bg-base-200/30 pr-12 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="btn btn-ghost btn-circle btn-sm absolute right-1 top-1/2 -translate-y-1/2 text-base-content/55"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showConfirmPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" className="btn btn-primary h-12 w-full rounded-xl text-sm font-bold shadow-lg shadow-primary/20" disabled={isLoading}>
+            {isLoading ? <><span className="loading loading-spinner loading-xs" />Resetting password...</> : "Reset password"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className="w-full py-1 text-center text-xs font-semibold text-base-content/60 hover:text-primary"
+          >
+            Use a different email address
+          </button>
+        </form>
+      )}
+
+      <div className="mt-8 border-t border-base-content/10 pt-5">
+        <Link to="/login" className="inline-flex items-center gap-2 text-sm font-semibold text-base-content/60 hover:text-primary">
+          <ArrowLeft className="size-4" /> Back to sign in
+        </Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 
