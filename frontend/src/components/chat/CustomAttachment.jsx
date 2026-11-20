@@ -110,8 +110,6 @@ export const CustomAttachment = ({ attachments = [], isMyMessage = false }) => {
               <a
                 href={selectedImage}
                 download
-                target="_blank"
-                rel="noopener noreferrer"
                 className="btn btn-circle btn-sm bg-black/60 text-white hover:bg-black/80 border-none"
               >
                 <Download className="size-4" />

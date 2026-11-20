@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Plus, BookOpen, Trash2, Check, X } from "lucide-react";
+import { Sparkles, Plus, Trash2, X } from "lucide-react";
 import { getLanguageFlag } from "../../lib/languageUtils.jsx";
 import toast from "react-hot-toast";
 
@@ -9,34 +9,18 @@ export const GroupVocabVault = ({ channelId, targetLanguage = "Spanish" }) => {
   const [vocabList, setVocabList] = useState(() => {
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [
-      {
-        id: "1",
-        word: "Desafío",
-        type: "noun",
-        meaning: "Challenge / obstacle",
-        lang: targetLanguage || "Spanish",
-        addedBy: "Elena",
-      },
-      {
-        id: "2",
-        word: "Aprovechar",
-        type: "verb",
-        meaning: "To make the most of / take advantage of",
-        lang: targetLanguage || "Spanish",
-        addedBy: "Frank",
-      },
-      {
-        id: "3",
-        word: "Ojalá",
-        type: "interjection",
-        meaning: "I hope / God willing",
-        lang: targetLanguage || "Spanish",
-        addedBy: "Alex",
-      },
-    ];
+      if (saved) {
+        const entries = JSON.parse(saved);
+        if (Array.isArray(entries)) {
+          return entries.filter(
+            (entry) => !["1", "2", "3"].includes(String(entry.id))
+          );
+        }
+      }
+    } catch {
+      // Start empty when saved vocabulary is unavailable or malformed.
+    }
+    return [];
   });
 
   const [isAdding, setIsAdding] = useState(false);
@@ -47,7 +31,9 @@ export const GroupVocabVault = ({ channelId, targetLanguage = "Spanish" }) => {
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(vocabList));
-    } catch {}
+    } catch {
+      // Keep the in-memory list usable when browser storage is unavailable.
+    }
   }, [vocabList, storageKey]);
 
   const handleAddWord = (e) => {

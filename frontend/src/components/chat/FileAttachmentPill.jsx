@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Download, FileText, FileArchive, FileCode, File } from "lucide-react";
+import FilePreviewModal from "./FilePreviewModal.jsx";
 
 const getFileMeta = (filename = "", mimeType = "") => {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
@@ -20,6 +21,7 @@ const getFileMeta = (filename = "", mimeType = "") => {
 };
 
 export const FileAttachmentPill = ({ attachment, isMyMessage = false }) => {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const fileUrl = attachment.asset_url || attachment.url;
   const fileName = attachment.title || attachment.fallback || "Attached File";
   const fileSize = attachment.file_size
@@ -37,7 +39,13 @@ export const FileAttachmentPill = ({ attachment, isMyMessage = false }) => {
           : "bg-base-100 border-base-content/12 text-base-content shadow-sm hover:border-primary/40"
       }`}
     >
-      <div className="flex items-center gap-2.5 min-w-0">
+      <button
+        type="button"
+        onClick={() => setIsPreviewOpen(true)}
+        disabled={!fileUrl}
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg text-left disabled:cursor-default"
+        title={`Preview ${fileName}`}
+      >
         <div
           className={`w-8 h-8 rounded-lg ${
             isMyMessage ? "bg-primary/15 text-primary" : `${bg} ${text}`
@@ -48,17 +56,15 @@ export const FileAttachmentPill = ({ attachment, isMyMessage = false }) => {
         <div className="min-w-0">
           <p className="text-xs font-semibold truncate leading-snug">{fileName}</p>
           <p className="text-[10px] opacity-60 mt-0.5">
-            {fileSize ? fileSize : "Document"} • Ready to download
+            {fileSize ? fileSize : "Document"} • Click to preview
           </p>
         </div>
-      </div>
+      </button>
 
       {fileUrl && (
         <a
           href={fileUrl}
           download={fileName}
-          target="_blank"
-          rel="noopener noreferrer"
           className={`p-2 rounded-xl flex items-center justify-center transition-all ${
             isMyMessage
               ? "hover:bg-white/20 text-white"
@@ -69,6 +75,11 @@ export const FileAttachmentPill = ({ attachment, isMyMessage = false }) => {
           <Download className="size-4" />
         </a>
       )}
+
+      <FilePreviewModal
+        file={isPreviewOpen ? { url: fileUrl, name: fileName, mime_type: mimeType } : null}
+        onClose={() => setIsPreviewOpen(false)}
+      />
     </div>
   );
 };

@@ -1,22 +1,68 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { StreamChat } from "stream-chat";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStreamToken } from "../lib/api";
 import useAuthUser from "../hooks/useAuthUser";
-import { Phone, Video, PhoneCall, X, Check, Volume2 } from "lucide-react";
+import { Phone, Video, PhoneCall, X, Check, Volume2, Bell } from "lucide-react";
 import Avatar from "./Avatar.jsx";
 import CallModal from "./CallModal.jsx";
 import ringtone from "../lib/ringtone.js";
 import { useCallStore } from "../store/useCallStore";
-import { promptMediaPermissions } from "../lib/mediaPermissions";
+import toast from "react-hot-toast";
+import { connectUser } from "../lib/stream.js";
 
-const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
+const updateCallInvitation = async (client, messageId, call, status, duration = 0) => {
+  if (!messageId) return false;
+  const kind = call.isAudioOnly ? "Voice" : "Video";
+  const icon = call.isAudioOnly ? "📞" : "📹";
+  const time = `${Math.floor(duration / 60).toString().padStart(2, "0")}:${(duration % 60).toString().padStart(2, "0")}`;
+  const text = status === "ended"
+    ? `${icon} ${kind} call ended • ${time}`
+    : status === "missed"
+      ? `${icon} Missed ${kind.toLowerCase()} call`
+      : status === "declined"
+        ? `${icon} ${kind} call declined`
+        : `${icon} ${kind} call cancelled`;
+
+  try {
+    await client.partialUpdateMessage(messageId, {
+      set: {
+        text,
+        call_status: status,
+        call_duration: status === "ended" ? duration : undefined,
+      },
+    });
+    return true;
+  } catch (error) {
+    console.warn("Could not update call invitation message:", error);
+    return false;
+  }
+};
+
+const showDesktopCallNotification = (call) => {
+  if (typeof window === "undefined" || !("Notification" in window)) return null;
+  if (window.Notification.permission !== "granted") return null;
+
+  const notification = new window.Notification(
+    `${call.caller?.name || "Someone"} is calling`,
+    {
+      body: `Incoming ${call.isAudioOnly ? "voice" : "video"} call`,
+      icon: "/lingualoom-mark.svg",
+      tag: `lingualoom-call-${call.callId}`,
+      requireInteraction: true,
+    }
+  );
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  };
+  return notification;
+};
 
 const IncomingCallManager = () => {
   const { authUser } = useAuthUser();
   const [incomingCall, setIncomingCall] = useState(null);
   const [chatClient, setChatClient] = useState(null);
-  const { activeCall, startCall, endCall } = useCallStore();
+  const { activeCall, outgoingCall, startCall, endCall, clearOutgoingCall } = useCallStore();
   const incomingCallRef = useRef(null);
   incomingCallRef.current = incomingCall;
 
@@ -38,6 +84,12 @@ const IncomingCallManager = () => {
     };
   }, [incomingCall, activeCall]);
 
+  useEffect(() => {
+    if (!incomingCall || activeCall) return;
+    const notification = showDesktopCallNotification(incomingCall);
+    return () => notification?.close();
+  }, [incomingCall, activeCall]);
+
   // When a call becomes active (started or answered), immediately dismiss incoming prompt & ringtone
   useEffect(() => {
     if (activeCall) {
@@ -55,18 +107,14 @@ const IncomingCallManager = () => {
 
     const setupListener = async () => {
       try {
-        client = StreamChat.getInstance(STREAM_API_KEY);
+        client = await connectUser(authUser, tokenData.token);
         setChatClient(client);
 
         // Listen for new messages across all user channels
-        messageListener = client.on("message.new", (event) => {
+        messageListener = client.on("message.new", async (event) => {
           const msg = event?.message;
           if (!msg) return;
 
-          // If user is already on a call, ignore incoming calls
-          if (useCallStore.getState().activeCall) return;
-
-          // Ignore messages sent by ourselves (check both authUser ID and client.userID)
           const myId = String(authUser?._id || authUser?.id || "");
           const senderId = String(msg.user?.id || "");
           const clientUserId = String(client?.userID || "");
@@ -76,6 +124,43 @@ const IncomingCallManager = () => {
           ) {
             return;
           }
+
+          const callStore = useCallStore.getState();
+          const pendingOutgoingCall = callStore.outgoingCall;
+
+          if (msg.custom_type === "call_signal") {
+            if (msg.call_status === "accepted" && pendingOutgoingCall?.callId === msg.call_id) {
+              callStore.startCall({
+                ...pendingOutgoingCall,
+                messageId: msg.message_id || pendingOutgoingCall.messageId,
+              });
+            } else if (["declined", "cancelled", "missed"].includes(msg.call_status)) {
+              if (pendingOutgoingCall?.callId === msg.call_id) {
+                await updateCallInvitation(
+                  client,
+                  pendingOutgoingCall.messageId,
+                  pendingOutgoingCall,
+                  msg.call_status
+                );
+                callStore.clearOutgoingCall(msg.call_id);
+              }
+              if (incomingCallRef.current?.callId === msg.call_id) {
+                setIncomingCall(null);
+              }
+            } else if (msg.call_status === "ended") {
+              await updateCallInvitation(
+                client,
+                msg.message_id,
+                { isAudioOnly: msg.call_type === "audio" },
+                "ended",
+                msg.call_duration
+              );
+            }
+            return;
+          }
+
+          // If user is already on a call, ignore incoming calls
+          if (callStore.activeCall) return;
 
           // Ignore messages already marked missed or ended
           const lowerText = (msg.text || "").toLowerCase();
@@ -144,8 +229,12 @@ const IncomingCallManager = () => {
               const lowerText = (msg.text || "").toLowerCase();
               if (
                 msg.call_status === "missed" ||
+                msg.call_status === "declined" ||
+                msg.call_status === "cancelled" ||
                 msg.call_status === "ended" ||
                 lowerText.includes("missed") ||
+                lowerText.includes("declined") ||
+                lowerText.includes("cancelled") ||
                 lowerText.includes("ended")
               ) {
                 ringtone.stop();
@@ -185,35 +274,64 @@ const IncomingCallManager = () => {
         return;
       }
 
-      if (chatClient && authUser) {
-        try {
-          const channelType = incomingCall.channelType || "messaging";
-          const channelId =
-            incomingCall.channelId ||
-            [authUser._id, incomingCall.caller?.id].sort().join("-");
-          const channel = chatClient.channel(channelType, channelId);
-          channel.sendMessage({
-            text: incomingCall.isAudioOnly
-              ? "📞 Missed voice call"
-              : "📹 Missed video call",
-            call_status: "missed",
-            call_type: incomingCall.isAudioOnly ? "audio" : "video",
-          });
-        } catch (e) {
-          console.warn("Could not send missed call message on timeout:", e);
-        }
-      }
       setIncomingCall(null);
     }, 40000);
 
     return () => clearTimeout(timer);
   }, [incomingCall, chatClient, authUser]);
 
+  // Stop ringing if nobody answers, without joining the call room.
+  useEffect(() => {
+    if (!outgoingCall || !chatClient) return;
+    const callId = outgoingCall.callId;
+    const timer = setTimeout(async () => {
+      const currentCall = useCallStore.getState().outgoingCall;
+      if (currentCall?.callId !== callId) return;
+
+      useCallStore.getState().clearOutgoingCall(callId);
+      try {
+        await updateCallInvitation(chatClient, currentCall.messageId, currentCall, "missed");
+        const channel = chatClient.channel(
+          currentCall.channelType || "messaging",
+          currentCall.channelId
+        );
+        await channel.sendMessage({
+          text: "Call invitation timed out",
+          custom_type: "call_signal",
+          silent: true,
+          call_id: callId,
+          call_status: "missed",
+          call_type: currentCall.isAudioOnly ? "audio" : "video",
+          message_id: currentCall.messageId,
+        });
+      } catch (error) {
+        console.warn("Could not send unanswered call status:", error);
+      }
+    }, 40000);
+
+    return () => clearTimeout(timer);
+  }, [outgoingCall, chatClient]);
+
   const handleAccept = async () => {
     ringtone.stop();
     if (incomingCall) {
-      // Proactively trigger browser permission prompt for mic & cam
-      promptMediaPermissions(incomingCall.isAudioOnly);
+      try {
+        const channelType = incomingCall.channelType || "messaging";
+        const channel = chatClient.channel(channelType, incomingCall.channelId);
+        await channel.sendMessage({
+          text: "Call accepted",
+          custom_type: "call_signal",
+          silent: true,
+          call_id: incomingCall.callId,
+          call_type: incomingCall.isAudioOnly ? "audio" : "video",
+          call_status: "accepted",
+          message_id: incomingCall.messageId,
+        });
+      } catch (error) {
+        console.error("Could not notify caller that the call was accepted:", error);
+        toast.error("Could not connect the call. Please try again.");
+        return;
+      }
 
       startCall({
         callId: incomingCall.callId,
@@ -222,6 +340,8 @@ const IncomingCallManager = () => {
         channelType: incomingCall.channelType,
         callerName: incomingCall.caller?.name,
         callerPic: incomingCall.caller?.image,
+        messageId: incomingCall.messageId,
+        isCaller: false,
       });
       setIncomingCall(null);
     }
@@ -237,12 +357,14 @@ const IncomingCallManager = () => {
           [authUser._id, incomingCall.caller?.id].sort().join("-");
         const channel = chatClient.channel(channelType, channelId);
         channel.sendMessage({
-          text: incomingCall.isAudioOnly
-            ? "📞 Missed voice call"
-            : "📹 Missed video call",
-          call_status: "missed",
+          text: "Call invitation declined",
+          custom_type: "call_signal",
+          silent: true,
+          call_id: incomingCall.callId,
+          call_status: "declined",
           call_type: incomingCall.isAudioOnly ? "audio" : "video",
-        });
+          message_id: incomingCall.messageId,
+        }).catch((error) => console.warn("Could not send call decline:", error));
       } catch (e) {
         console.warn("Could not send missed call message on decline:", e);
       }
@@ -250,8 +372,69 @@ const IncomingCallManager = () => {
     setIncomingCall(null);
   };
 
+  const handleCancelOutgoing = () => {
+    const pendingCall = useCallStore.getState().outgoingCall;
+    if (!pendingCall) return;
+
+    clearOutgoingCall(pendingCall.callId);
+    if (chatClient) {
+      const channel = chatClient.channel(
+        pendingCall.channelType || "messaging",
+        pendingCall.channelId
+      );
+      updateCallInvitation(chatClient, pendingCall.messageId, pendingCall, "cancelled");
+      channel.sendMessage({
+        text: "Call invitation cancelled",
+        custom_type: "call_signal",
+        silent: true,
+        call_id: pendingCall.callId,
+        call_status: "cancelled",
+        call_type: pendingCall.isAudioOnly ? "audio" : "video",
+        message_id: pendingCall.messageId,
+      }).catch((error) => console.warn("Could not send call cancellation:", error));
+    }
+  };
+
+  const handleEnableDesktopAlerts = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    try {
+      const permission = await window.Notification.requestPermission();
+      if (permission === "granted" && incomingCall) {
+        showDesktopCallNotification(incomingCall);
+      }
+    } catch (error) {
+      console.warn("Could not request desktop call notifications:", error);
+    }
+  };
+
   return (
     <>
+      {outgoingCall && !activeCall && !incomingCall && (
+        <div className="fixed top-5 left-1/2 z-[999999] w-[92vw] max-w-md -translate-x-1/2 animate-fadeIn">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-base-200/95 p-3 text-base-content shadow-xl backdrop-blur-xl">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                {outgoingCall.isAudioOnly ? <Phone className="size-5" /> : <Video className="size-5" />}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold">Calling {outgoingCall.callerName || "your partner"}</p>
+                <p className="flex items-center gap-1.5 text-xs text-base-content/65">
+                  <span className="size-1.5 animate-pulse rounded-full bg-primary" />
+                  Waiting for them to answer…
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCancelOutgoing}
+              className="btn btn-sm shrink-0 gap-2 rounded-xl bg-error/15 text-error hover:bg-error hover:text-error-content"
+            >
+              <X className="size-4" /> Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Floating Incoming Call Banner */}
       {incomingCall && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[999999] w-[92vw] max-w-md animate-bounce-subtle">
@@ -287,6 +470,17 @@ const IncomingCallManager = () => {
                     Incoming {incomingCall.isAudioOnly ? "Voice" : "Video"} Call • Ringing...
                   </span>
                 </p>
+                {typeof window !== "undefined" &&
+                  "Notification" in window &&
+                  window.Notification.permission === "default" && (
+                    <button
+                      type="button"
+                      onClick={handleEnableDesktopAlerts}
+                      className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-white/65 hover:text-white"
+                    >
+                      <Bell className="size-3" /> Enable desktop alerts
+                    </button>
+                  )}
               </div>
             </div>
 

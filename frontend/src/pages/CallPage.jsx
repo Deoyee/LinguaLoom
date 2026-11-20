@@ -8,7 +8,6 @@ import {
   StreamVideo,
   StreamVideoClient,
   StreamCall,
-  CallControls,
   PaginatedGridLayout,
   StreamTheme,
   CallingState,
@@ -19,6 +18,7 @@ import "@stream-io/video-react-sdk/dist/css/styles.css";
 import toast from "react-hot-toast";
 import PageLoader from "../components/PageLoader";
 import MicrophonePermissionBanner from "../components/MicrophonePermissionBanner";
+import CallControlBar from "../components/CallControlBar.jsx";
 
 const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
 
@@ -81,6 +81,10 @@ const CallPage = () => {
             micStream.getTracks().forEach((t) => t.stop());
           }
           await callInstance.microphone.enable();
+          if (!isAudioOnly) {
+            await callInstance.camera.enable();
+            console.log("Camera enabled for video call");
+          }
           console.log("Microphone enabled on behalf of user");
         } catch (micErr) {
           console.warn("Could not auto-enable microphone on join:", micErr);
@@ -122,7 +126,7 @@ const CallPage = () => {
         videoClient.disconnectUser().catch((err) => console.warn("Error disconnecting client on cleanup:", err));
       }
     };
-  }, [tokenData?.token, authUser?._id, callId]);
+  }, [tokenData?.token, authUser, callId]);
 
   if (isLoading || isConnecting) return <PageLoader />;
 
@@ -193,7 +197,7 @@ const CallContent = () => {
 
   return (
     <StreamTheme>
-      <MicrophonePermissionBanner />
+      <MicrophonePermissionBanner isAudioOnly={isAudioOnly} />
       {isAudioOnly && (
         <div className="absolute top-4 left-4 z-50 bg-black/70 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-medium text-emerald-400 border border-emerald-500/30 flex items-center gap-2 shadow-lg">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -201,7 +205,7 @@ const CallContent = () => {
         </div>
       )}
       <PaginatedGridLayout groupSize={2} />
-      <CallControls />
+      <CallControlBar />
     </StreamTheme>
   );
 };
