@@ -13,12 +13,25 @@ const __dirname = path.resolve();
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3001;
 
-app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true, // allow frontend send req
-}));
+// Flexible CORS setup supporting all localhost/127.0.0.1 ports and environments
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+        if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -37,7 +50,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 app.listen(PORT, () => {
-    console.log("hiMEStream Server Running", PORT);
+    console.log("LinguaLoom Server Running", PORT);
     connectDB();
 });
-// Nodemon reloaded for mail configuration
+// Nodemon reloaded for mail configuration

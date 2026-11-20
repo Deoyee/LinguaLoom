@@ -101,26 +101,26 @@ export const EmojiStickerPicker = ({
   return (
     <div
       ref={pickerRef}
-      className="absolute bottom-full left-0 mb-3 z-[99999] w-[340px] sm:w-[400px] h-[430px] bg-[#161212]/98 backdrop-blur-2xl border border-white/15 shadow-[0_15px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(16,185,129,0.18)] rounded-3xl flex flex-col overflow-hidden animate-fadeIn"
+      className="absolute bottom-full left-0 mb-3 z-[99999] w-[340px] sm:w-[400px] h-[430px] bg-base-200/98 backdrop-blur-2xl border border-base-content/15 shadow-2xl rounded-3xl flex flex-col overflow-hidden animate-fadeIn"
       role="dialog"
       aria-label="Emoji and Sticker Picker"
     >
       {/* Top Header: Tab Switcher & Close */}
-      <div className="px-3.5 pt-3 pb-2 bg-[#1f1919] border-b border-white/10 flex items-center justify-between gap-2 select-none">
-        <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/10">
+      <div className="px-3.5 pt-3 pb-2 bg-base-300/80 border-b border-base-content/10 flex items-center justify-between gap-2 select-none">
+        <div className="flex items-center gap-1.5 p-1 bg-base-100 rounded-2xl border border-base-content/10">
           <button
             type="button"
             onClick={() => setActiveTab("stickers")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === "stickers"
                 ? "bg-emerald-500 text-white shadow-md scale-100"
-                : "text-gray-300 hover:text-white hover:bg-white/5"
+                : "text-base-content/70 hover:text-base-content hover:bg-base-content/5"
             }`}
           >
             <Sparkles className="size-3.5" />
             <span>Stickers</span>
             {myStickers.length > 0 && (
-              <span className="ml-1 text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full">
+              <span className="ml-1 text-[10px] bg-black/20 text-white px-1.5 py-0.2 rounded-full">
                 {myStickers.length}
               </span>
             )}
@@ -132,7 +132,7 @@ export const EmojiStickerPicker = ({
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === "emojis"
                 ? "bg-emerald-500 text-white shadow-md scale-100"
-                : "text-gray-300 hover:text-white hover:bg-white/5"
+                : "text-base-content/70 hover:text-base-content hover:bg-base-content/5"
             }`}
           >
             <Smile className="size-3.5" />
@@ -143,7 +143,7 @@ export const EmojiStickerPicker = ({
         <button
           type="button"
           onClick={onClose}
-          className="btn btn-circle btn-xs btn-ghost text-gray-400 hover:text-white hover:bg-white/10"
+          className="btn btn-circle btn-xs btn-ghost text-base-content/60 hover:text-base-content hover:bg-base-content/10"
           title="Close Picker"
           aria-label="Close"
         >
@@ -152,9 +152,9 @@ export const EmojiStickerPicker = ({
       </div>
 
       {/* Search Input */}
-      <div className="p-2.5 bg-[#140f0f] border-b border-white/5">
+      <div className="p-2.5 bg-base-200 border-b border-base-content/10">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-base-content/40" />
           <input
             type="text"
             value={searchQuery}
@@ -164,13 +164,13 @@ export const EmojiStickerPicker = ({
                 ? "Search sticker packs..."
                 : "Search emojis..."
             }
-            className="w-full bg-[#1e1818] border border-white/10 rounded-xl pl-9 pr-8 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 transition-colors"
+            className="w-full bg-base-100 border border-base-content/15 rounded-xl pl-9 pr-8 py-1.5 text-xs text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-emerald-500/60 transition-colors"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
             >
               <X className="size-3.5" />
             </button>
@@ -184,15 +184,15 @@ export const EmojiStickerPicker = ({
       {activeTab === "stickers" && (
         <div className="flex-1 flex flex-col min-h-0">
           {/* Pack Navigation Tabs */}
-          <div className="flex items-center gap-1.5 px-3 py-2 bg-[#1b1515] border-b border-white/5 overflow-x-auto no-scrollbar select-none">
+          <div className="flex items-center gap-1.5 px-3 py-2 bg-base-300/50 border-b border-base-content/10 overflow-x-auto no-scrollbar select-none">
             {/* My Collection Tab */}
             <button
               type="button"
               onClick={() => setSelectedPackId("my_collection")}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedPackId === "my_collection"
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                  ? "bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm"
+                  : "text-base-content/60 hover:text-base-content hover:bg-base-content/5"
               }`}
             >
               <Star className="size-3.5 fill-amber-400 text-amber-400" />
@@ -210,8 +210,8 @@ export const EmojiStickerPicker = ({
                 onClick={() => setSelectedPackId(pack.id)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
                   selectedPackId === pack.id
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    ? "bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 shadow-sm"
+                    : "text-base-content/60 hover:text-base-content hover:bg-base-content/5"
                 }`}
               >
                 <span>{pack.icon}</span>
@@ -227,7 +227,7 @@ export const EmojiStickerPicker = ({
                 {currentStickers.map((sticker) => (
                   <div
                     key={sticker.id}
-                    className="group relative flex flex-col items-center justify-center p-2 rounded-2xl bg-[#1d1717] hover:bg-[#261f1f] border border-white/5 hover:border-emerald-500/40 transition-all cursor-pointer shadow-sm active:scale-95"
+                    className="group relative flex flex-col items-center justify-center p-2 rounded-2xl bg-base-100 hover:bg-base-300/60 border border-base-content/10 hover:border-emerald-500/40 transition-all cursor-pointer shadow-sm active:scale-95"
                     onClick={() => {
                       onSelectSticker(sticker);
                       onClose();
@@ -240,7 +240,7 @@ export const EmojiStickerPicker = ({
                       className="w-20 h-20 sm:w-22 sm:h-22 object-contain drop-shadow-md group-hover:scale-105 transition-transform"
                       loading="lazy"
                     />
-                    <span className="text-[11px] font-medium text-gray-300 group-hover:text-white text-center mt-1 truncate max-w-full px-1">
+                    <span className="text-[11px] font-medium text-base-content/80 group-hover:text-base-content text-center mt-1 truncate max-w-full px-1">
                       {sticker.name}
                     </span>
 
@@ -262,21 +262,21 @@ export const EmojiStickerPicker = ({
                 ))}
               </div>
             ) : selectedPackId === "my_collection" ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-gray-400">
-                <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20 text-amber-400 mb-2.5">
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-base-content/60">
+                <div className="p-3 bg-amber-500/10 rounded-full border border-amber-500/20 text-amber-500 mb-2.5">
                   <Star className="size-6 fill-amber-400" />
                 </div>
-                <h4 className="text-sm font-bold text-white mb-1">
+                <h4 className="text-sm font-bold text-base-content mb-1">
                   Your sticker collection is empty
                 </h4>
-                <p className="text-xs max-w-xs text-gray-400 leading-relaxed">
+                <p className="text-xs max-w-xs text-base-content/60 leading-relaxed">
                   When someone sends a sticker in chat, click the{" "}
-                  <strong className="text-amber-300">⭐ Add</strong> button on
+                  <strong className="text-amber-500">⭐ Add</strong> button on
                   it to save it here!
                 </p>
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-gray-400">
+              <div className="h-full flex items-center justify-center text-xs text-base-content/60">
                 No stickers matching "{searchQuery}"
               </div>
             )}
@@ -291,7 +291,7 @@ export const EmojiStickerPicker = ({
         <div className="flex-1 flex flex-col min-h-0">
           {/* Category Tabs */}
           {!searchQuery && (
-            <div className="flex items-center gap-1 px-3 py-2 bg-[#1b1515] border-b border-white/5 overflow-x-auto no-scrollbar select-none">
+            <div className="flex items-center gap-1 px-3 py-2 bg-base-300/50 border-b border-base-content/10 overflow-x-auto no-scrollbar select-none">
               {EMOJI_CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
@@ -300,7 +300,7 @@ export const EmojiStickerPicker = ({
                   className={`p-1.5 rounded-xl text-base transition-all ${
                     selectedEmojiCategory === cat.id
                       ? "bg-emerald-500/20 ring-1 ring-emerald-500/40 scale-105"
-                      : "opacity-60 hover:opacity-100 hover:bg-white/5"
+                      : "opacity-60 hover:opacity-100 hover:bg-base-content/5"
                   }`}
                   title={cat.name}
                 >
@@ -318,7 +318,7 @@ export const EmojiStickerPicker = ({
                   key={`${emoji}-${idx}`}
                   type="button"
                   onClick={() => onSelectEmoji(emoji)}
-                  className="flex items-center justify-center h-10 w-10 text-2xl rounded-xl hover:bg-white/10 active:scale-90 transition-all select-none"
+                  className="flex items-center justify-center h-10 w-10 text-2xl rounded-xl hover:bg-base-content/10 active:scale-90 transition-all select-none"
                   title={emoji}
                 >
                   {emoji}

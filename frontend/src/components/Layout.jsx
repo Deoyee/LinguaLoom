@@ -27,4 +27,3 @@ const Layout = ({ children, showSidebar = false }) => {
   );
 };
 export default Layout;
-

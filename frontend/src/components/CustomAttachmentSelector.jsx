@@ -75,8 +75,8 @@ export const CustomAttachmentSelector = () => {
         onClick={() => setIsPickerOpen((prev) => !prev)}
         className={`p-2 rounded-full transition-all duration-200 flex items-center justify-center ${
           isPickerOpen
-            ? "text-emerald-400 bg-emerald-500/20 scale-105"
-            : "text-gray-400 hover:text-emerald-400 hover:bg-white/10 active:scale-95"
+            ? "text-emerald-500 bg-emerald-500/20 scale-105"
+            : "text-base-content/60 hover:text-emerald-500 hover:bg-base-content/10 active:scale-95"
         }`}
         title="Emoji and Sticker Packs"
         aria-label="Emoji and Sticker Packs"

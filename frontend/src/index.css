@@ -2,22 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  font-size: 80%;
+}
+
+/* ============================================================
+   GLOBAL SCROLLBAR HIDING (Clean, Modern Seamless Scrolling)
+   Hides scrollbars everywhere while preserving smooth scrolling
+   ============================================================ */
+*,
+*::before,
+*::after {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+html,
+body,
+#root,
+.str-chat,
+.str-chat__list,
+.str-chat__message-list-scroll,
+.str-chat__message-list-scroll-container,
+.str-chat__virtual-list,
+.str-chat__ul,
+main,
+aside,
+div {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+.str-chat::-webkit-scrollbar,
+.str-chat__list::-webkit-scrollbar,
+.str-chat__message-list-scroll::-webkit-scrollbar,
+.str-chat__message-list-scroll-container::-webkit-scrollbar,
+.str-chat__virtual-list::-webkit-scrollbar,
+.str-chat__ul::-webkit-scrollbar,
+main::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+div::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+
 /* ============================================================
    STREAM CHAT THEME VARIABLES & OVERRIDES
    ============================================================ */
 .str-chat,
-.str-chat__theme-dark {
-  --str-chat__primary-color: #10b981;
-  --str-chat__background-color: #141010;
-  --str-chat__secondary-background-color: #1c1717;
-  --str-chat__surface-color: #1f1a1a;
-  --str-chat__secondary-surface-color: #241e1e;
-  --str-chat__primary-surface-color: transparent;
-  --str-chat__own-message-bubble-background-color: transparent;
-  --str-chat__own-message-bubble-color: #ffffff;
-  --str-chat__message-bubble-background-color: #241e1e;
-  --str-chat__message-bubble-color: #f3f4f6;
-  --str-chat__message-send-button-color: #10b981;
+.str-chat__theme-dark,
+.str-chat__theme-light {
+  --str-chat__primary-color: var(--fallback-p, oklch(var(--p) / 1));
+  --str-chat__background-color: var(--fallback-b2, oklch(var(--b2) / 0.45));
+  --str-chat__secondary-background-color: var(--fallback-b2, oklch(var(--b2) / 1));
+  --str-chat__surface-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  --str-chat__secondary-surface-color: var(--fallback-b2, oklch(var(--b2) / 1));
+  --str-chat__primary-surface-color: var(--fallback-p, oklch(var(--p) / 1));
+  --str-chat__own-message-bubble-background-color: var(--fallback-p, oklch(var(--p) / 1));
+  --str-chat__own-message-bubble-color: var(--fallback-pc, oklch(var(--pc) / 1));
+  --str-chat__message-bubble-background-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  --str-chat__message-bubble-color: var(--fallback-bc, oklch(var(--bc) / 1));
+  --str-chat__message-send-button-color: var(--fallback-p, oklch(var(--p) / 1));
   font-family: inherit;
   height: 100% !important;
 }
@@ -58,12 +114,12 @@
 }
 
 .str-chat__header-channel {
-  background-color: #1c1717 !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border-bottom: 1px solid oklch(var(--bc) / 0.15) !important;
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   padding: 10px 140px 10px 16px !important;
   min-height: 56px !important;
   cursor: pointer !important;
@@ -75,36 +131,128 @@
 }
 
 .str-chat__header-channel .str-chat__header-title {
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   font-weight: 700 !important;
   font-size: 15px !important;
 }
 
 .str-chat__header-channel .str-chat__header-subtitle {
-  color: rgba(243, 244, 246, 0.6) !important;
+  color: oklch(var(--bc) / 0.6) !important;
   font-size: 12px !important;
 }
 
 .str-chat__list {
-  background-color: #141010 !important;
-  padding: 16px !important;
+  background-color: var(--fallback-b2, oklch(var(--b2) / 0.45)) !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
+  padding: 24px 20px !important;
   flex: 1 1 0% !important;
   min-height: 0 !important;
   border: none !important;
 }
 
+
+/* ============================================================
+   MESSAGE ROW & INNER LAYOUT (PREVENTS SQUISHING TEXT INTO SLIVERS)
+   ============================================================ */
+.str-chat__message {
+  width: 100% !important;
+  display: flex !important;
+}
+
+.str-chat__message.str-chat__message--me {
+  justify-content: flex-end !important;
+}
+
+.str-chat__message.str-chat__message--other {
+  justify-content: flex-start !important;
+}
+
+.str-chat__message .str-chat__message-inner {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  position: relative !important;
+  min-width: 0 !important;
+  width: fit-content !important;
+  max-width: 82% !important;
+}
+
+.str-chat__message.str-chat__message--me .str-chat__message-inner {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: fit-content !important;
+  max-width: 82% !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+.str-chat__message.str-chat__message--me .str-chat__message-options {
+  order: 1 !important;
+  flex-shrink: 0 !important;
+}
+
+.str-chat__message.str-chat__message--me .str-chat__message-bubble {
+  order: 2 !important;
+  max-width: 100% !important;
+  width: auto !important;
+  min-width: 36px !important;
+  flex-shrink: 1 !important;
+}
+
+.str-chat__message.str-chat__message--other .str-chat__message-inner {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: fit-content !important;
+  max-width: 82% !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.str-chat__message.str-chat__message--other .str-chat__message-bubble {
+  order: 1 !important;
+  max-width: 100% !important;
+  width: auto !important;
+  min-width: 36px !important;
+  flex-shrink: 1 !important;
+}
+
+.str-chat__message.str-chat__message--other .str-chat__message-options {
+  order: 2 !important;
+  flex-shrink: 0 !important;
+}
+
+.str-chat__message-text p,
+.str-chat__message-text-inner p,
+.str-chat__message-simple-text-inner p {
+  white-space: pre-wrap !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  display: block !important;
+  margin: 0 !important;
+}
+
 /* ============================================================
    SENDER MESSAGE BUBBLE (ME)
-   Clean, sleek modern messenger bubble - NO nested pills or navy box!
+   Clean, sleek modern messenger bubble with reduced, refined theme tint
    ============================================================ */
 .str-chat__message--me .str-chat__message-bubble {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  color: #ffffff !important;
-  border-radius: 18px 18px 4px 18px !important;
-  border: none !important;
-  box-shadow: 0 3px 12px rgba(16, 185, 129, 0.28) !important;
+  background-color: oklch(var(--p) / 0.16) !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
+  border-radius: 16px 16px 4px 16px !important;
+  border: 1px solid oklch(var(--p) / 0.30) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
   overflow: hidden !important;
   padding: 0 !important;
+  max-width: 100% !important;
+  min-width: 36px !important;
+  width: auto !important;
+  flex-shrink: 1 !important;
 }
 
 /* Strip any background/border from inner elements so NO double bubble is rendered */
@@ -115,50 +263,56 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: #ffffff !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   border-radius: 0 !important;
 }
 
 .str-chat__message--me .str-chat__message-text {
-  padding: 10px 14px !important;
+  padding: 8px 24px 8px 14px !important;
+  position: relative !important;
+  cursor: pointer !important;
 }
 
+.str-chat__message--me .str-chat__message-text p,
 .str-chat__message--me .str-chat__message-text-inner p,
 .str-chat__message--me .str-chat__message-simple-text-inner p {
-  color: #ffffff !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   font-size: 14.5px !important;
-  line-height: 1.45 !important;
+  font-weight: 450 !important;
+  line-height: 1.5 !important;
   margin: 0 !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
 }
 
-/* Sender bubble links - high contrast bold white so they are clearly readable on green */
+/* Sender bubble links */
 .str-chat__message--me a,
 .str-chat__message--me .str-chat__message-text a,
 .str-chat__message--me .str-chat__message-text-inner a,
 .str-chat__message--me .str-chat__message-simple-text-inner a {
-  color: #ffffff !important;
+  color: var(--fallback-p, oklch(var(--p) / 1)) !important;
   font-weight: 600 !important;
   text-decoration: underline !important;
-  text-underline-offset: 3px !important;
-  word-break: break-all !important;
+  text-underline-offset: 2px !important;
+  word-break: break-word !important;
 }
 
 .str-chat__message--me a:hover,
 .str-chat__message--me .str-chat__message-text a:hover {
-  color: #f0fdf4 !important;
+  opacity: 0.85 !important;
   text-decoration: underline !important;
 }
 
-/* Call links in sender bubble - interactive pill badge with dark glass effect */
+/* Call links in sender bubble - interactive pill badge with soft glass effect */
 .str-chat__message--me a[href*="/call/"] {
   display: inline-block !important;
-  margin-top: 6px !important;
-  padding: 6px 12px !important;
-  background: rgba(0, 0, 0, 0.35) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  border-radius: 12px !important;
-  font-size: 12.5px !important;
+  margin-top: 4px !important;
+  padding: 4px 10px !important;
+  background: oklch(var(--p) / 0.15) !important;
+  color: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  border: 1px solid oklch(var(--p) / 0.3) !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
   font-weight: 600 !important;
   text-decoration: none !important;
   letter-spacing: 0.2px !important;
@@ -166,23 +320,27 @@
 }
 
 .str-chat__message--me a[href*="/call/"]:hover {
-  background: rgba(0, 0, 0, 0.55) !important;
-  border-color: #ffffff !important;
-  color: #ffffff !important;
+  background: oklch(var(--p) / 0.25) !important;
+  border-color: var(--fallback-p, oklch(var(--p) / 1)) !important;
   transform: translateY(-1px) !important;
 }
 
 /* ============================================================
    RECEIVER MESSAGE BUBBLE (OTHER)
+   Elevated card surface with subtle border & shadow that distinctly contrasts canvas
    ============================================================ */
 .str-chat__message--other .str-chat__message-bubble {
-  background: #241e1e !important;
-  color: #f3f4f6 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 18px 18px 18px 4px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22) !important;
+  background-color: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.12) !important;
+  border-radius: 16px 16px 16px 4px !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
   overflow: hidden !important;
   padding: 0 !important;
+  max-width: 100% !important;
+  min-width: 36px !important;
+  width: auto !important;
+  flex-shrink: 1 !important;
 }
 
 .str-chat__message--other .str-chat__message-text,
@@ -192,20 +350,24 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   border-radius: 0 !important;
 }
 
 .str-chat__message--other .str-chat__message-text {
-  padding: 10px 14px !important;
+  padding: 8px 14px !important;
 }
 
+.str-chat__message--other .str-chat__message-text p,
 .str-chat__message--other .str-chat__message-text-inner p,
 .str-chat__message--other .str-chat__message-simple-text-inner p {
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   font-size: 14.5px !important;
-  line-height: 1.45 !important;
+  font-weight: 450 !important;
+  line-height: 1.5 !important;
   margin: 0 !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
 }
 
 /* Receiver bubble links */
@@ -213,27 +375,27 @@
 .str-chat__message--other .str-chat__message-text a,
 .str-chat__message--other .str-chat__message-text-inner a,
 .str-chat__message--other .str-chat__message-simple-text-inner a {
-  color: #34d399 !important;
+  color: var(--fallback-p, oklch(var(--p) / 1)) !important;
   font-weight: 600 !important;
   text-decoration: underline !important;
-  text-underline-offset: 3px !important;
-  word-break: break-all !important;
+  text-underline-offset: 2px !important;
+  word-break: break-word !important;
 }
 
 .str-chat__message--other a:hover {
-  color: #6ee7b7 !important;
+  opacity: 0.85 !important;
 }
 
 /* Call links in receiver bubble */
 .str-chat__message--other a[href*="/call/"] {
   display: inline-block !important;
-  margin-top: 6px !important;
-  padding: 6px 12px !important;
-  background: rgba(16, 185, 129, 0.18) !important;
-  color: #34d399 !important;
-  border: 1px solid rgba(16, 185, 129, 0.45) !important;
-  border-radius: 12px !important;
-  font-size: 12.5px !important;
+  margin-top: 4px !important;
+  padding: 4px 10px !important;
+  background: oklch(var(--p) / 0.15) !important;
+  color: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  border: 1px solid oklch(var(--p) / 0.28) !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
   font-weight: 600 !important;
   text-decoration: none !important;
   letter-spacing: 0.2px !important;
@@ -241,10 +403,17 @@
 }
 
 .str-chat__message--other a[href*="/call/"]:hover {
-  background: rgba(16, 185, 129, 0.3) !important;
-  border-color: #34d399 !important;
-  color: #6ee7b7 !important;
+  background: oklch(var(--p) / 0.25) !important;
+  border-color: var(--fallback-p, oklch(var(--p) / 1)) !important;
   transform: translateY(-1px) !important;
+}
+
+/* Clean transparent wrapper when message contains attachment cards */
+.str-chat__message.str-chat__message--has-attachment .str-chat__message-bubble {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 /* Attachments inside message bubble */
@@ -261,95 +430,249 @@
   max-width: 100% !important;
 }
 
-/* Message metadata (timestamp, edited, checkmark) */
+/* ============================================================
+   MESSAGE METADATA & TICK INSIDE TEXT BOX
+   Tick is placed inside the bubble, very small; timestamp hidden until clicked
+   ============================================================ */
 .str-chat__message-metadata {
-  color: rgba(255, 255, 255, 0.45) !important;
+  color: oklch(var(--bc) / 0.5) !important;
   font-size: 11px !important;
-  margin-top: 4px !important;
+  margin: 0 !important;
 }
 
-.str-chat__message-status {
-  color: #10b981 !important;
+/* Sender metadata overlaps the bubble's lower-right padding */
+.str-chat__message.str-chat__message--me:not(.str-chat__message--has-attachment) .str-chat__message-metadata {
+  position: relative !important;
+  align-self: flex-end !important;
+  margin: 0 0 5px -18px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  z-index: 5 !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  line-height: 1 !important;
 }
 
-.str-chat__message-status svg path {
-  fill: #10b981 !important;
+/* Very small, elegant tick icon */
+.str-chat__message--me .str-chat__message-status {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  color: oklch(var(--bc) / 0.55) !important;
 }
 
-/* Message hover actions (reaction, reply, edit menu) - Compact, no vertical stretching */
+.str-chat__message--me .str-chat__message-status-delivered,
+.str-chat__message--me .str-chat__message-status-read-by {
+  color: var(--fallback-p, oklch(var(--p) / 0.95)) !important;
+}
+
+.str-chat__message--me .str-chat__message-status svg {
+  width: 8px !important;
+  height: 7px !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  opacity: 0.75 !important;
+}
+
+.str-chat__message--me .str-chat__message-status svg path {
+  fill: currentColor !important;
+}
+
+/* ============================================================
+  TINY READ AVATAR & HIDE EDITED LABELS
+  ============================================================ */
+.str-chat__mesage-simple-edited,
+.str-chat__message-simple-edited,
+.str-chat__message-edited-timestamp,
+.str-chat__message-simple-status-number {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+}
+
+.str-chat__avatar--message-status {
+  display: inline-flex !important;
+  visibility: visible !important;
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  margin: 0 !important;
+  border: 1px solid var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+
+.str-chat__message-status-read-by::after {
+  content: none !important;
+}
+
+/* Timestamp hidden by default across all messages */
+.str-chat__message .str-chat__message-simple-timestamp,
+.str-chat__message-metadata .str-chat__message-simple-timestamp {
+  display: none !important;
+}
+
+/* Timestamp revealed when text info is clicked (via show-time or str-chat__message--show-info) */
+.show-time .str-chat__message-simple-timestamp,
+.show-time.str-chat__message .str-chat__message-simple-timestamp,
+.str-chat__message.show-time .str-chat__message-simple-timestamp,
+.str-chat__message--show-info .str-chat__message-simple-timestamp,
+.custom-msg-wrapper.show-time .str-chat__message-simple-timestamp {
+  display: inline-block !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  opacity: 0.75 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 0.75)) !important;
+  margin-right: 2px !important;
+  user-select: none !important;
+  line-height: 1 !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* When time is visible in sender bubble, expand right padding slightly */
+.show-time .str-chat__message--me:not(.str-chat__message--has-attachment) .str-chat__message-text,
+.str-chat__message--show-info .str-chat__message--me:not(.str-chat__message--has-attachment) .str-chat__message-text,
+.custom-msg-wrapper.show-time .str-chat__message--me:not(.str-chat__message--has-attachment) .str-chat__message-text {
+  padding-right: 68px !important;
+  min-width: 95px !important;
+}
+
+/* Receiver messages: cursor pointer and time reveal */
+.str-chat__message--other .str-chat__message-text {
+  cursor: pointer !important;
+}
+
+.str-chat__message--other .str-chat__message-metadata {
+  display: none !important;
+}
+
+.show-time .str-chat__message--other .str-chat__message-metadata,
+.str-chat__message--show-info .str-chat__message--other .str-chat__message-metadata,
+.custom-msg-wrapper.show-time .str-chat__message--other .str-chat__message-metadata {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-top: 3px !important;
+  font-size: 10px !important;
+  opacity: 0.75 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 0.75)) !important;
+}
+
+.show-time .str-chat__message--other .str-chat__message-metadata .str-chat__message-simple-timestamp,
+.str-chat__message--show-info .str-chat__message--other .str-chat__message-metadata .str-chat__message-simple-timestamp,
+.custom-msg-wrapper.show-time .str-chat__message--other .str-chat__message-metadata .str-chat__message-simple-timestamp {
+  display: inline-block !important;
+}
+
+/* ============================================================
+   MESSAGE HOVER ACTIONS (Reactions, Reply, 3-dots Menu)
+   Hidden by default; appears smoothly ONLY on message/bubble hover
+   ============================================================ */
 .str-chat__message-options {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.18s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transform: translateY(2px) scale(0.92) !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   height: auto !important;
   max-height: 36px !important;
-  align-self: flex-start !important;
+  align-self: center !important;
   display: flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  gap: 5px !important;
   padding: 0 !important;
-  margin: 0 !important;
+  margin: 0 4px !important;
+  z-index: 10 !important;
+}
+
+/* Show strictly when user hovers on the message bubble / text box or options itself */
+.str-chat__message-inner:hover .str-chat__message-options,
+.str-chat__message-bubble:hover ~ .str-chat__message-options,
+.str-chat__message-options:hover,
+.str-chat__message-options--active,
+.str-chat__message-options.str-chat__message-options--active,
+.str-chat__message--menu-opened .str-chat__message-options {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
 }
 
 .str-chat__message-options .str-chat__message-actions-box-button,
 .str-chat__message-options .str-chat__message-reply-in-thread-button,
 .str-chat__message-options .str-chat__message-reactions-button {
-  background: rgba(32, 26, 26, 0.92) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.18) !important;
   border-radius: 50% !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
-  color: #9ca3af !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 0.85)) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
   transition: all 0.15s ease !important;
 }
 
-.str-chat__message-options .str-chat__message-actions-box-button:hover,
-.str-chat__message-options .str-chat__message-reply-in-thread-button:hover,
-.str-chat__message-options .str-chat__message-reactions-button:hover {
-  background: #362a2a !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  transform: scale(1.1) !important;
+.str-chat__message-options svg {
+  width: 14px !important;
+  height: 14px !important;
+  color: inherit !important;
 }
 
 .str-chat__message-options svg path {
   fill: currentColor !important;
 }
 
+.str-chat__message-options .str-chat__message-actions-box-button:hover,
+.str-chat__message-options .str-chat__message-reply-in-thread-button:hover,
+.str-chat__message-options .str-chat__message-reactions-button:hover {
+  background: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  color: var(--fallback-pc, oklch(var(--pc) / 1)) !important;
+  border-color: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  box-shadow: 0 3px 10px oklch(var(--p) / 0.35) !important;
+  transform: scale(1.12) !important;
+}
+
 /* Reaction selector popup (when clicking the smiley) */
 .str-chat__message-reactions-options {
-  background: #1e1818 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   border-radius: 9999px !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
   padding: 6px 10px !important;
 }
 
 .str-chat__message-reactions-option:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: oklch(var(--bc) / 0.15) !important;
 }
 
 /* Three-dots menu (actions box dropdown) */
 .str-chat__message-actions-box {
-  background: #1e1818 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   border-radius: 14px !important;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25) !important;
   padding: 6px !important;
   z-index: 50 !important;
 }
 
 .str-chat__message-actions-list-item-button {
-  color: #e5e7eb !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   font-size: 13px !important;
   padding: 8px 12px !important;
   border-radius: 8px !important;
@@ -357,36 +680,40 @@
 }
 
 .str-chat__message-actions-list-item-button:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #ffffff !important;
+  background: oklch(var(--bc) / 0.15) !important;
+  color: var(--fallback-p, oklch(var(--p) / 1)) !important;
 }
 
 /* Message input area */
 .str-chat__message-input {
-  background-color: #1c1717 !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border-top: 1px solid oklch(var(--bc) / 0.15) !important;
   padding: 10px 16px !important;
 }
 
 .str-chat__message-textarea-with-emoji-picker {
-  background-color: #241e1e !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background-color: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   border-radius: 24px !important;
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
 }
 
 .str-chat__message-textarea-with-emoji-picker textarea {
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
+}
+
+.str-chat__message-textarea-with-emoji-picker textarea::placeholder {
+  color: oklch(var(--bc) / 0.15) !important;
 }
 
 /* Voice Notes & Audio Recording styling */
 .str-chat__start-recording-audio-button {
-  color: #10b981 !important;
+  color: var(--fallback-p, oklch(var(--p) / 1)) !important;
   transition: all 0.15s ease !important;
 }
 
 .str-chat__start-recording-audio-button:hover {
-  color: #34d399 !important;
+  opacity: 0.85 !important;
   transform: scale(1.1) !important;
 }
 
@@ -396,12 +723,12 @@
 }
 
 .str-chat__audio_recorder {
-  background-color: #241e1e !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background-color: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   border-radius: 9999px !important;
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   padding: 4px 8px 4px 14px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -409,11 +736,11 @@
 }
 
 .str-chat__audio_recorder__waveform {
-  --str-chat__waveform-color: #10b981 !important;
+  --str-chat__waveform-color: var(--fallback-p, oklch(var(--p) / 1)) !important;
 }
 
 .str-chat__audio_recorder__cancel-button {
-  color: #ef4444 !important;
+  color: var(--fallback-er, oklch(var(--er) / 1)) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -425,13 +752,13 @@
 }
 
 .str-chat__audio_recorder__cancel-button svg path {
-  fill: #ef4444 !important;
+  fill: currentColor !important;
 }
 
 .str-chat__audio_recorder__toggle-playback-button,
 .str-chat__audio_recorder__pause-recording-button,
 .str-chat__audio_recorder__resume-recording-button {
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -440,21 +767,21 @@
 .str-chat__audio_recorder__toggle-playback-button svg path,
 .str-chat__audio_recorder__pause-recording-button svg path,
 .str-chat__audio_recorder__resume-recording-button svg path {
-  fill: #f3f4f6 !important;
+  fill: currentColor !important;
 }
 
 .str-chat__recording-timer {
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   font-variant-numeric: tabular-nums !important;
   font-weight: 600 !important;
   font-size: 13px !important;
 }
 
-/* Complete & Stop Send Button (Green circle with CRISP WHITE check/arrow inside!) */
+/* Complete & Stop Send Button (Uses theme primary color with crisp primary-content inside) */
 .str-chat__audio_recorder__stop-button,
 .str-chat__audio_recorder__complete-button {
-  background-color: #10b981 !important;
-  color: #ffffff !important;
+  background-color: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  color: var(--fallback-pc, oklch(var(--pc) / 1)) !important;
   border-radius: 50% !important;
   width: 32px !important;
   height: 32px !important;
@@ -462,13 +789,13 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.45) !important;
+  box-shadow: 0 2px 8px oklch(var(--p) / 0.28) !important;
   transition: all 0.15s ease !important;
 }
 
 .str-chat__audio_recorder__stop-button:hover,
 .str-chat__audio_recorder__complete-button:hover {
-  background-color: #059669 !important;
+  opacity: 0.9 !important;
   transform: scale(1.08) !important;
 }
 
@@ -476,15 +803,15 @@
 .str-chat__audio_recorder__complete-button svg,
 .str-chat__audio_recorder__stop-button svg path,
 .str-chat__audio_recorder__complete-button svg path {
-  color: #ffffff !important;
-  fill: #ffffff !important;
+  color: var(--fallback-pc, oklch(var(--pc) / 1)) !important;
+  fill: var(--fallback-pc, oklch(var(--pc) / 1)) !important;
 }
 
 /* Waveform progress bar & smooth gliding seeker */
 .str-chat__wave-progress-bar__progress-indicator {
   transition: left 0.12s linear !important;
-  background-color: #ffffff !important;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7) !important;
+  background-color: var(--fallback-pc, oklch(var(--pc) / 1)) !important;
+  box-shadow: 0 0 6px oklch(var(--pc) / 0.7) !important;
 }
 
 .str-chat__wave-progress-bar__amplitude-bar {
@@ -492,26 +819,26 @@
 }
 
 .str-chat__wave-progress-bar__amplitude-bar--active {
-  background-color: #10b981 !important;
+  background-color: var(--fallback-p, oklch(var(--p) / 1)) !important;
 }
 
 /* Audio attachment player inside messages */
 .str-chat__message-attachment-audio-widget,
 .str-chat__message-attachment-audio-player {
-  background: rgba(0, 0, 0, 0.2) !important;
+  background: oklch(var(--b1) / 0.5) !important;
   border-radius: 16px !important;
   padding: 8px 12px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
 }
 
 .str-chat__message-attachment-audio-widget--play-button {
-  background: #10b981 !important;
-  color: #ffffff !important;
+  background: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  color: var(--fallback-pc, oklch(var(--pc) / 1)) !important;
   border-radius: 50% !important;
 }
 
 .str-chat__message-attachment-audio-widget--play-button svg path {
-  fill: #ffffff !important;
+  fill: var(--fallback-pc, oklch(var(--pc) / 1)) !important;
 }
 
 /* ============================================================
@@ -539,10 +866,11 @@
 }
 
 .str-chat__modal--open:not(.str-chat__gallery-modal) .str-chat__modal__inner {
-  background: #1c1717 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   border-radius: 20px !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px oklch(var(--bc) / 0.15) !important;
   padding: 24px 20px 20px !important;
   width: 94% !important;
   max-width: 480px !important;
@@ -810,7 +1138,7 @@
   padding: 6px 14px !important;
   font-size: 13px !important;
   font-weight: 600 !important;
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   letter-spacing: 0.05em !important;
   z-index: 10000 !important;
   line-height: normal !important;
@@ -870,21 +1198,21 @@
 
 .str-chat__edit-message-form .str-chat__message-textarea-with-emoji-picker,
 .str-chat__edit-message-form textarea {
-  background-color: #241e1e !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background-color: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   border-radius: 14px !important;
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   padding: 12px 14px !important;
   font-size: 14px !important;
   line-height: 1.45 !important;
   width: 100% !important;
   outline: none !important;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 
 .str-chat__edit-message-form textarea:focus {
-  border-color: #10b981 !important;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+  border-color: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  box-shadow: 0 0 0 2px oklch(var(--p) / 0.28) !important;
 }
 
 /* Separated, distinct edit message buttons */
@@ -895,15 +1223,15 @@
   gap: 12px !important;
   margin-top: 14px !important;
   padding-top: 12px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-top: 1px solid oklch(var(--bc) / 0.15) !important;
 }
 
 .str-chat__edit-message-cancel {
   padding: 8px 18px !important;
   border-radius: 10px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #9ca3af !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: oklch(var(--bc) / 0.15) !important;
+  color: oklch(var(--bc) / 0.15) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   font-weight: 500 !important;
   font-size: 13px !important;
   cursor: pointer !important;
@@ -912,36 +1240,36 @@
 }
 
 .str-chat__edit-message-cancel:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
-  color: #f3f4f6 !important;
+  background: oklch(var(--bc) / 0.15) !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
 }
 
 .str-chat__edit-message-send {
   padding: 8px 22px !important;
   border-radius: 10px !important;
-  background: #10b981 !important;
-  color: #ffffff !important;
+  background: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  color: var(--fallback-pc, oklch(var(--pc) / 1)) !important;
   border: none !important;
   font-weight: 600 !important;
   font-size: 13px !important;
   cursor: pointer !important;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 2px 8px oklch(var(--p) / 0.28) !important;
   transition: all 0.15s ease !important;
   text-transform: uppercase !important;
   letter-spacing: 0.02em !important;
 }
 
 .str-chat__edit-message-send:hover {
-  background: #059669 !important;
+  opacity: 0.9 !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45) !important;
+  box-shadow: 0 4px 12px oklch(var(--p) / 0.28) !important;
 }
 
 /* Date separators */
 .str-chat__date-separator-date {
-  background-color: #241e1e !important;
-  color: rgba(243, 244, 246, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  color: oklch(var(--bc) / 0.15) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   font-size: 11px !important;
   border-radius: 999px !important;
   padding: 4px 12px !important;
@@ -949,18 +1277,18 @@
 
 /* Date separator line */
 .str-chat__date-separator-line {
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: oklch(var(--bc) / 0.15) !important;
 }
 
 /* ============================================================
    ATTACHMENT PREVIEWS IN COMPOSER (FILE, VIDEO, AUDIO)
    ============================================================ */
 .str-chat__attachment-preview-file {
-  background: #241e1e !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border: 1px solid oklch(var(--bc) / 0.15) !important;
   border-radius: 12px !important;
   padding: 8px 14px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   position: relative !important;
   display: flex !important;
   align-items: center !important;
@@ -969,7 +1297,7 @@
 }
 
 .str-chat__attachment-preview-file-name {
-  color: #f3f4f6 !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
   font-weight: 500 !important;
   font-size: 13px !important;
 }

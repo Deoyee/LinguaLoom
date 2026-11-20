@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { MessageSquare, MapPin, UserMinus, Loader2, Eye } from "lucide-react";
+import {
+  MessageSquare,
+  MapPin,
+  UserMinus,
+  Loader2,
+  IdCard,
+  Phone,
+  Video,
+  ArrowRightLeft,
+} from "lucide-react";
 import { getLanguageFlag } from "../lib/languageUtils.jsx";
 import Avatar from "./Avatar.jsx";
 import useOnlineUsers from "../hooks/useOnlineUsers";
@@ -29,118 +38,158 @@ const FriendCard = ({ friend, onViewProfile, hasChatHistory = false }) => {
   });
 
   return (
-    <div className="card bg-base-200/75 hover:bg-base-200 border border-base-content/10 hover:border-primary/40 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden">
-      <div className="card-body p-5 flex flex-col justify-between space-y-4">
-        {/* USER INFO */}
-        <div className="flex items-start justify-between gap-3">
+    <div className="p-4 rounded-3xl bg-base-200/90 hover:bg-base-200 border border-base-content/10 hover:border-primary/40 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col justify-between group select-none">
+      <div>
+        {/* Top Header Row: Avatar, Info, & Call Shortcuts */}
+        <div className="flex items-start justify-between gap-2.5">
           <div
-            className="flex items-start gap-3.5 cursor-pointer group/avatar min-w-0 flex-1"
+            className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
             onClick={() => onViewProfile && onViewProfile(friend)}
             title="View Profile"
           >
-            <Avatar
-              src={friend.profilePic}
-              name={friend.fullName}
-              size="lg"
-              showOnline={isOnline}
-              isOnline={isOnline}
-            />
+            <div className="relative flex-shrink-0">
+              <Avatar
+                src={friend.profilePic}
+                name={friend.fullName}
+                size="md"
+                showOnline={isOnline}
+                isOnline={isOnline}
+              />
+            </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="text-base sm:text-lg font-bold text-base-content group-hover/avatar:text-primary transition-colors truncate leading-snug">
-                {friend.fullName}
-              </h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm sm:text-base font-bold text-base-content group-hover:text-primary transition-colors truncate leading-tight">
+                  {friend.fullName}
+                </h3>
+                <span className="text-base flex-shrink-0">
+                  {getLanguageFlag(friend.nativeLanguage)}
+                </span>
+              </div>
 
-              {friend.location && (
-                <div className="flex items-center text-xs text-base-content/60 mt-1">
-                  <MapPin className="size-3 mr-1 text-primary/70 flex-shrink-0" />
-                  <span className="truncate">{friend.location}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {hasChatHistory && (
-            <span className="badge badge-primary/10 text-primary border border-primary/20 text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0">
-              Recent Chat
-            </span>
-          )}
-        </div>
-
-        {/* LANGUAGES */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <span>{getLanguageFlag(friend.nativeLanguage)}</span>
-            <span className="truncate">Native: {capitialize(friend.nativeLanguage)}</span>
-          </span>
-
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-            <span>{getLanguageFlag(friend.learningLanguage)}</span>
-            <span className="truncate">Learning: {capitialize(friend.learningLanguage)}</span>
-          </span>
-        </div>
-
-        {/* ACTIONS */}
-        {confirmingUnfriend ? (
-          <div className="pt-2 animate-fadeIn">
-            <div className="bg-error/10 border border-error/25 rounded-xl p-2.5 flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-error flex items-center gap-1 truncate">
-                <UserMinus className="size-3.5 flex-shrink-0" />
-                <span>Remove friend?</span>
-              </span>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => unfriendMutation()}
-                  disabled={isUnfriending}
-                  className="btn btn-error btn-xs rounded-lg text-white font-semibold shadow-xs"
-                >
-                  {isUnfriending ? <Loader2 className="size-3 animate-spin" /> : "Remove"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmingUnfriend(false)}
-                  className="btn btn-ghost btn-xs rounded-lg text-base-content/70 hover:text-base-content"
-                >
-                  Cancel
-                </button>
+              <div className="text-xs text-base-content/60 font-medium mt-0.5 truncate">
+                Language Partner
               </div>
             </div>
           </div>
-        ) : (
-          <div className="pt-2 flex items-center gap-2">
+
+          {/* Quick Call Actions */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <Link
               to={`/chat/${friend._id}`}
-              className="btn btn-primary btn-sm flex-1 rounded-xl gap-2 font-medium shadow-xs hover:shadow-md transition-all active:scale-[0.98]"
+              className="w-7 h-7 rounded-xl bg-base-100 hover:bg-primary hover:text-primary-content text-base-content/75 flex items-center justify-center transition-all shadow-xs border border-base-content/10"
+              title="Voice Call"
             >
-              <MessageSquare className="size-4" />
-              <span>Message</span>
+              <Phone className="size-3.5" />
             </Link>
+            <Link
+              to={`/chat/${friend._id}`}
+              className="w-7 h-7 rounded-xl bg-base-100 hover:bg-primary hover:text-primary-content text-base-content/75 flex items-center justify-center transition-all shadow-xs border border-base-content/10"
+              title="Video Call"
+            >
+              <Video className="size-3.5" />
+            </Link>
+          </div>
+        </div>
 
-            {onViewProfile && (
+        {/* Visual Language Matrix Bridge */}
+        <div className="my-3 p-2.5 rounded-2xl bg-base-100 border border-base-content/10 flex items-center justify-between text-xs shadow-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base flex-shrink-0">
+              {getLanguageFlag(friend.nativeLanguage)}
+            </span>
+            <div className="min-w-0">
+              <span className="block text-[9px] uppercase tracking-wider text-base-content/50 font-bold leading-none">
+                Native
+              </span>
+              <span className="font-semibold text-xs text-base-content truncate block mt-0.5">
+                {capitialize(friend.nativeLanguage || "English")}
+              </span>
+            </div>
+          </div>
+
+          <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mx-1">
+            <ArrowRightLeft className="size-3" />
+          </div>
+
+          <div className="flex items-center gap-2 min-w-0 text-right justify-end">
+            <div className="min-w-0">
+              <span className="block text-[9px] uppercase tracking-wider text-base-content/50 font-bold leading-none">
+                Learning
+              </span>
+              <span className="font-semibold text-xs text-base-content truncate block mt-0.5">
+                {capitialize(friend.learningLanguage || "Spanish")}
+              </span>
+            </div>
+            <span className="text-base flex-shrink-0">
+              {getLanguageFlag(friend.learningLanguage)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ACTIONS */}
+      {confirmingUnfriend ? (
+        <div className="pt-3 border-t border-base-content/10 animate-fadeIn">
+          <div className="bg-error/10 border border-error/25 rounded-2xl p-2.5 flex items-center justify-between gap-2">
+            <span className="text-xs font-bold text-error flex items-center gap-1 truncate">
+              <UserMinus className="size-3.5 flex-shrink-0" />
+              <span>Unfriend?</span>
+            </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 type="button"
-                onClick={() => onViewProfile(friend)}
-                className="btn btn-circle btn-sm bg-base-300/60 hover:bg-base-300 text-base-content/70 hover:text-primary border-none transition-colors"
-                title="View Full Profile"
-                aria-label="View Full Profile"
+                onClick={() => unfriendMutation()}
+                disabled={isUnfriending}
+                className="btn btn-error btn-xs rounded-xl text-white font-bold shadow-xs"
               >
-                <Eye className="size-4" />
+                {isUnfriending ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  "Remove"
+                )}
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => setConfirmingUnfriend(false)}
+                className="btn btn-ghost btn-xs rounded-xl text-base-content/80 hover:text-base-content font-bold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="pt-3 border-t border-base-content/10 flex items-center gap-2">
+          <Link
+            to={`/chat/${friend._id}`}
+            className="btn btn-primary btn-sm flex-1 rounded-2xl gap-2 font-bold shadow-sm hover:shadow-md transition-all active:scale-[0.98] text-xs"
+          >
+            <MessageSquare className="size-3.5" />
+            <span>Open Chat</span>
+          </Link>
 
+          {onViewProfile && (
             <button
               type="button"
-              onClick={() => setConfirmingUnfriend(true)}
-              className="btn btn-circle btn-sm bg-base-300/60 hover:bg-error/15 text-base-content/60 hover:text-error border-none transition-colors"
-              title="Unfriend"
-              aria-label="Unfriend"
+              onClick={() => onViewProfile(friend)}
+              className="btn btn-ghost btn-sm btn-square rounded-2xl text-base-content/70 hover:text-primary hover:bg-base-100 transition-colors"
+              title="View Language Passport"
             >
-              <UserMinus className="size-4" />
+              <IdCard className="size-4" />
             </button>
-          </div>
-        )}
-      </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setConfirmingUnfriend(true)}
+            className="btn btn-ghost btn-sm btn-square rounded-2xl text-base-content/60 hover:text-error hover:bg-error/10 transition-colors"
+            title="Unfriend partner"
+          >
+            <UserMinus className="size-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
