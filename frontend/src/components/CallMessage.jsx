@@ -24,11 +24,14 @@ export const CallMessage = ({ message, isMyMessage, onCallBack }) => {
     lowerText.includes("ended") ||
     lowerText.includes("call ended");
 
+  const isDeclined =
+    message?.call_status === "declined" || lowerText.includes("declined");
+  const isCancelled =
+    message?.call_status === "cancelled" || lowerText.includes("cancelled");
   const isMissed =
-    !isEnded &&
+    !isEnded && !isDeclined && !isCancelled &&
     (message?.call_status === "missed" ||
       lowerText.includes("missed") ||
-      lowerText.includes("declined") ||
       lowerText.includes("no answer"));
 
   // Extract duration from text e.g. "📞 Voice call ended • 01:23"
@@ -54,7 +57,11 @@ export const CallMessage = ({ message, isMyMessage, onCallBack }) => {
     : "";
 
   let title = "";
-  if (isMissed) {
+  if (isDeclined) {
+    title = isAudio ? "Voice Call Declined" : "Video Call Declined";
+  } else if (isCancelled) {
+    title = isAudio ? "Voice Call Cancelled" : "Video Call Cancelled";
+  } else if (isMissed) {
     title = isAudio ? "Missed Voice Call" : "Missed Video Call";
   } else if (isEnded) {
     title = isAudio ? "Voice Call Ended" : "Video Call Ended";
@@ -64,7 +71,11 @@ export const CallMessage = ({ message, isMyMessage, onCallBack }) => {
     title = isAudio ? "Incoming Voice Call" : "Incoming Video Call";
   }
 
-  const subtitle = isMissed
+  const subtitle = isDeclined
+    ? "Declined"
+    : isCancelled
+    ? "Cancelled"
+    : isMissed
     ? "No answer"
     : isEnded
     ? durationText

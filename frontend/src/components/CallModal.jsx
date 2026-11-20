@@ -3,7 +3,6 @@ import {
   StreamVideo,
   StreamVideoClient,
   StreamCall,
-  CallControls,
   PaginatedGridLayout,
   StreamTheme,
   CallingState,
@@ -22,9 +21,11 @@ import {
   MicOff,
   VideoOff,
   PhoneOff,
+  GripVertical,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import MicrophonePermissionBanner from "./MicrophonePermissionBanner";
+import CallControlBar from "./CallControlBar.jsx";
 import { useCallStore } from "../store/useCallStore";
 import { promptMediaPermissions } from "../lib/mediaPermissions";
 
@@ -38,6 +39,9 @@ function CallModal({ isOpen, onClose, callId, isAudioOnly, authUser, token }) {
 
   const { activeCall, isMinimized, minimizeCall, maximizeCall } = useCallStore();
   const hasEndedSentRef = useRef(false);
+  const miniCallDragRef = useRef(null);
+  const suppressMiniCallClickRef = useRef(false);
+  const [miniCallPosition, setMiniCallPosition] = useState(null);
 
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -76,17 +80,45 @@ function CallModal({ isOpen, onClose, callId, isAudioOnly, authUser, token }) {
       if (!cId) return;
 
       const channel = chatClient.channel("messaging", cId);
-      const durFormatted = formatDuration(durSecs || duration);
+      const finalDuration = durSecs ?? duration;
+      const messageId = activeCall?.messageId;
+      const callType = isAudioOnly ? "audio" : "video";
+      const endedText = isAudioOnly
+        ? `📞 Voice call ended • ${formatDuration(finalDuration)}`
+        : `📹 Video call ended • ${formatDuration(finalDuration)}`;
+
+      if (messageId && activeCall?.isCaller) {
+        await chatClient.partialUpdateMessage(messageId, {
+          set: {
+            text: endedText,
+            call_status: "ended",
+            call_duration: finalDuration,
+          },
+        });
+        return;
+      }
+
+      if (messageId) {
+        await channel.sendMessage({
+          text: "Call ended",
+          custom_type: "call_signal",
+          silent: true,
+          call_id: callId,
+          call_type: callType,
+          call_status: "ended",
+          call_duration: finalDuration,
+          message_id: messageId,
+        });
+        return;
+      }
 
       await channel.sendMessage({
-        text: isAudioOnly
-          ? `📞 Voice call ended • ${durFormatted}`
-          : `📹 Video call ended • ${durFormatted}`,
+        text: endedText,
+        call_id: callId,
         call_status: "ended",
-        call_type: isAudioOnly ? "audio" : "video",
-        call_duration: durSecs || duration,
+        call_type: callType,
+        call_duration: finalDuration,
       });
-      console.log("Call ended message sent successfully");
     } catch (err) {
       console.warn("Could not send call ended message:", err);
     }
@@ -160,7 +192,6 @@ function CallModal({ isOpen, onClose, callId, isAudioOnly, authUser, token }) {
         // Listen for call ended event so call ends for both participants
         callInstance.on("call.ended", () => {
           console.log("Call ended by remote participant");
-          toast("Call ended", { icon: "📞", id: "call-ended-remote" });
           onCloseRef.current?.();
         });
 
@@ -237,24 +268,76 @@ function CallModal({ isOpen, onClose, callId, isAudioOnly, authUser, token }) {
     onClose();
   };
 
+  const handleMiniCallPointerDown = (event) => {
+    if (event.target.closest("button")) return;
+    suppressMiniCallClickRef.current = false;
+    const cardRect = event.currentTarget.parentElement.getBoundingClientRect();
+    miniCallDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeft: cardRect.left,
+      startTop: cardRect.top,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleMiniCallPointerMove = (event) => {
+    const drag = miniCallDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(deltaX, deltaY) < 4) return;
+
+    drag.moved = true;
+    suppressMiniCallClickRef.current = true;
+    const cardRect = event.currentTarget.parentElement.getBoundingClientRect();
+    const maxLeft = Math.max(8, window.innerWidth - cardRect.width - 8);
+    const maxTop = Math.max(8, window.innerHeight - cardRect.height - 8);
+    setMiniCallPosition({
+      left: Math.min(maxLeft, Math.max(8, drag.startLeft + deltaX)),
+      top: Math.min(maxTop, Math.max(8, drag.startTop + deltaY)),
+    });
+  };
+
+  const handleMiniCallPointerUp = (event) => {
+    if (miniCallDragRef.current?.pointerId === event.pointerId) {
+      miniCallDragRef.current = null;
+    }
+  };
+
   if (!isOpen) return null;
 
   // MINIMIZED PICTURE-IN-PICTURE CALL CARD (allows texting anyone else while on call)
   if (isMinimized) {
     return (
       <div
-        className="fixed bottom-5 right-5 z-[999999] pointer-events-auto transition-all duration-300"
+        className={`fixed z-[999999] pointer-events-auto transition-[left,top] duration-150 ${miniCallPosition ? "" : "bottom-5 right-5"}`}
+        style={miniCallPosition ? { left: miniCallPosition.left, top: miniCallPosition.top } : undefined}
         role="dialog"
         aria-modal="false"
       >
         <div className="w-[320px] sm:w-[360px] bg-[#141010]/95 backdrop-blur-2xl border-2 border-emerald-500/50 shadow-[0_12px_45px_rgba(0,0,0,0.85),0_0_25px_rgba(16,185,129,0.3)] rounded-3xl overflow-hidden flex flex-col animate-fadeIn">
           {/* Minimized Card Top Header */}
           <div
-            onClick={maximizeCall}
-            className="px-3.5 py-2.5 bg-[#1c1717] border-b border-white/10 flex items-center justify-between cursor-pointer hover:bg-[#231d1d] transition-colors select-none"
-            title="Click card to expand call"
+            onClick={() => {
+              if (suppressMiniCallClickRef.current) {
+                suppressMiniCallClickRef.current = false;
+                return;
+              }
+              maximizeCall();
+            }}
+            onPointerDown={handleMiniCallPointerDown}
+            onPointerMove={handleMiniCallPointerMove}
+            onPointerUp={handleMiniCallPointerUp}
+            onPointerCancel={handleMiniCallPointerUp}
+            className="touch-none px-3.5 py-2.5 bg-[#1c1717] border-b border-white/10 flex items-center justify-between cursor-grab active:cursor-grabbing hover:bg-[#231d1d] transition-colors select-none"
+            title="Drag to move or click to expand"
           >
             <div className="flex items-center gap-2 min-w-0">
+              <GripVertical className="size-3.5 flex-shrink-0 text-white/40" />
               <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
@@ -458,7 +541,7 @@ function CallModalContent({ isAudioOnly, onClose }) {
         <PaginatedGridLayout groupSize={2} />
       </div>
       <div className="flex justify-center pt-2 z-30">
-        <CallControls onLeave={onClose} />
+        <CallControlBar onLeave={onClose} />
       </div>
     </StreamTheme>
   );

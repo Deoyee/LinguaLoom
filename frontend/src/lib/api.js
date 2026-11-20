@@ -121,3 +121,26 @@ export async function addGroupMembers(channelId, memberIds) {
   });
   return response.data;
 }
+
+export async function removeGroupMember(channelId, memberId) {
+  const response = await axiosInstance.delete(`/chat/group/${channelId}/members/${memberId}`);
+  return response.data;
+}
+
+export async function leaveGroup(channelId) {
+  const response = await axiosInstance.delete(`/chat/group/${channelId}/members/me`);
+  return response.data;
+}
+
+export async function updateGroupMemberRole(channelId, memberId, role) {
+  const response = await axiosInstance.patch(
+    `/chat/group/${channelId}/members/${memberId}/role`,
+    { role }
+  );
+  return response.data;
+}
+
+export async function deleteGroup(channelId) {
+  const response = await axiosInstance.delete(`/chat/group/${channelId}`);
+  return response.data;
+}

@@ -13,7 +13,6 @@ import {
   Thread,
   Window,
 } from "stream-chat-react";
-import { StreamChat } from "stream-chat";
 import {
   getStreamToken,
   getUserById,
@@ -28,7 +27,6 @@ import StickerMessage from "../components/StickerMessage.jsx";
 import CustomAttachmentSelector from "../components/CustomAttachmentSelector.jsx";
 import UserProfileModal from "../components/UserProfileModal.jsx";
 import { useCallStore } from "../store/useCallStore";
-import { promptMediaPermissions } from "../lib/mediaPermissions";
 import { useThemeStore } from "../store/useThemeStore";
 
 // Merged Chat Components
@@ -36,8 +34,8 @@ import ChatSidebar from "../components/chat/ChatSidebar.jsx";
 import ChatHeader from "../components/chat/ChatHeader.jsx";
 import ChatRightDrawer from "../components/chat/ChatRightDrawer.jsx";
 import CustomAttachment from "../components/chat/CustomAttachment.jsx";
+import { connectUser } from "../lib/stream.js";
 
-const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
 const ACTIVE_CHAT_STORAGE_KEY = "hime-active-chat-id";
 
 const readStoredChatId = () => {
@@ -104,7 +102,12 @@ const ChatPage = () => {
     });
   }, []);
 
-  const { startCall } = useCallStore();
+  const {
+    startCall,
+    startOutgoingCall,
+    clearOutgoingCall,
+    updateCallMessageId,
+  } = useCallStore();
   const queryClient = useQueryClient();
   const { authUser } = useAuthUser();
   const { isUserOnline } = useOnlineUsers();
@@ -212,6 +215,20 @@ const ChatPage = () => {
     };
   }, [isGroup, targetUserId, chatHistory, channel, groupMembers]);
 
+  const handleGroupExit = useCallback((exitedChannelId) => {
+    queryClient.setQueryData(["chatHistory"], (history = []) =>
+      history.filter((chat) => chat.channelId !== exitedChannelId)
+    );
+    try {
+      window.sessionStorage.removeItem(ACTIVE_CHAT_STORAGE_KEY);
+    } catch {
+      // The next chat is still selected from the in-memory chat history.
+    }
+    setTargetUserId(null);
+    setIsRightDrawerOpen(false);
+    navigate("/chat", { replace: true });
+  }, [queryClient, navigate]);
+
   const isFriend =
     Array.isArray(friends) &&
     friends.some(
@@ -282,19 +299,7 @@ const ChatPage = () => {
       try {
         setLoading(true);
 
-        const client = StreamChat.getInstance(STREAM_API_KEY);
-
-        // Connect user if not connected yet
-        if (!client.userID) {
-          await client.connectUser(
-            {
-              id: authUser._id,
-              name: authUser.fullName,
-              image: authUser.profilePic,
-            },
-            tokenData.token
-          );
-        }
+        const client = await connectUser(authUser, tokenData.token);
 
         let currChannel;
 
@@ -418,78 +423,55 @@ const ChatPage = () => {
     };
   }, [tokenData, authUser, targetUserId, isGroup]);
 
-  // Video call / Lounge
-  const handleVideoCall = useCallback(async () => {
-    if (channel) {
-      const callSessionId = `${channel.id}-${Date.now()}`;
-      promptMediaPermissions(false);
+  const beginOutgoingCall = useCallback(async (isAudioOnly) => {
+    if (!channel) return;
 
-      channel.sendMessage({
-        text: isGroup ? "📹 Group Video Lounge Started" : "📹 Video call",
+    const callSessionId = `${channel.id}-${Date.now()}`;
+    const recipient = channel?.state?.members?.[targetUserId]?.user;
+    const callData = {
+      callId: callSessionId,
+      isAudioOnly,
+      channelId: channel.id,
+      channelType: channel.type,
+      callerName: isGroup ? groupData?.name : recipient?.name || partnerUser?.fullName,
+      callerPic: isGroup ? groupData?.image : recipient?.image || partnerUser?.profilePic,
+      isCaller: true,
+      messageId: null,
+    };
+
+    startOutgoingCall(callData);
+    try {
+      const { message } = await channel.sendMessage({
+        text: isAudioOnly
+          ? isGroup ? "📞 Group Voice Lounge invitation" : "📞 Voice call invitation"
+          : isGroup ? "📹 Group Video Lounge invitation" : "📹 Video call invitation",
         call_id: callSessionId,
-        call_type: "video",
+        call_type: isAudioOnly ? "audio" : "video",
         call_status: "started",
       });
-
-      toast.success(
-        isGroup ? "Group Video Lounge started! 🎉" : "Video call started!"
-      );
-
-      startCall({
-        callId: callSessionId,
-        isAudioOnly: false,
-        channelId: channel.id,
-        channelType: channel.type,
-        callerName: isGroup
-          ? groupData?.name
-          : channel?.state?.members?.[targetUserId]?.user?.name ||
-            partnerUser?.fullName,
-        callerPic: isGroup
-          ? groupData?.image
-          : channel?.state?.members?.[targetUserId]?.user?.image ||
-            partnerUser?.profilePic,
-      });
+      updateCallMessageId(callSessionId, message?.id);
+    } catch (error) {
+      clearOutgoingCall(callSessionId);
+      console.error("Could not send call invitation:", error);
+      toast.error("Could not send the call invitation. Please try again.");
     }
-  }, [channel, startCall, isGroup, groupData, targetUserId, partnerUser]);
+  }, [channel, targetUserId, isGroup, groupData, partnerUser, startOutgoingCall, clearOutgoingCall, updateCallMessageId]);
 
-  // Voice call / Lounge
-  const handleVoiceCall = useCallback(async () => {
-    if (channel) {
-      const callSessionId = `${channel.id}-${Date.now()}`;
-      promptMediaPermissions(true);
+  const handleVideoCall = useCallback(
+    () => beginOutgoingCall(false),
+    [beginOutgoingCall]
+  );
 
-      channel.sendMessage({
-        text: isGroup ? "📞 Group Voice Lounge Started" : "📞 Voice call",
-        call_id: callSessionId,
-        call_type: "audio",
-        call_status: "started",
-      });
-
-      toast.success(
-        isGroup ? "Group Voice Lounge started! 🎙️" : "Voice call started!"
-      );
-
-      startCall({
-        callId: callSessionId,
-        isAudioOnly: true,
-        channelId: channel.id,
-        channelType: channel.type,
-        callerName: isGroup
-          ? groupData?.name
-          : channel?.state?.members?.[targetUserId]?.user?.name ||
-            partnerUser?.fullName,
-        callerPic: isGroup
-          ? groupData?.image
-          : channel?.state?.members?.[targetUserId]?.user?.image ||
-            partnerUser?.profilePic,
-      });
-    }
-  }, [channel, startCall, isGroup, groupData, targetUserId, partnerUser]);
+  const handleVoiceCall = useCallback(
+    () => beginOutgoingCall(true),
+    [beginOutgoingCall]
+  );
 
   // Custom Message Renderer with Audio Waveform, Video Cards & File Chips
   const CustomMessage = useCallback(
     (props) => {
       const { message, isMyMessage } = props;
+      if (message?.custom_type === "call_signal") return null;
       const text = message?.text || "";
       const lower = text.toLowerCase();
       const isCall =
@@ -716,6 +698,7 @@ const ChatPage = () => {
         isGroup={isGroup}
         groupData={groupData}
         groupMembers={groupMembers}
+        currentUserId={authUser?._id || authUser?.id}
         partnerUser={partnerUser}
         channelMember={channel?.state?.members?.[targetUserId]}
         isOnline={isGroup ? false : isUserOnline(targetUserId)}
@@ -729,6 +712,7 @@ const ChatPage = () => {
           refetchGroupMembers();
           refetchChatHistory();
         }}
+        onGroupExit={handleGroupExit}
       />
 
       {/* ======================================================== */}

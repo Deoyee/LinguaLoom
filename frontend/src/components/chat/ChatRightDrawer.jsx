@@ -16,18 +16,29 @@ import {
   Languages,
   Users,
   UserPlus,
+  UserMinus,
+  LogOut,
+  Trash2,
   Sparkles,
   ArrowUpRight,
   ShieldCheck,
   Search,
   Check,
+  Loader2,
 } from "lucide-react";
 import Avatar from "../Avatar.jsx";
 import { getLanguageFlag } from "../../lib/languageUtils.jsx";
 import { formatDate } from "../../lib/utils";
 import GroupVocabVault from "./GroupVocabVault.jsx";
+import FilePreviewModal from "./FilePreviewModal.jsx";
 import toast from "react-hot-toast";
-import { addGroupMembers } from "../../lib/api.js";
+import {
+  addGroupMembers,
+  removeGroupMember,
+  leaveGroup,
+  updateGroupMemberRole,
+  deleteGroup,
+} from "../../lib/api.js";
 
 export const ChatRightDrawer = ({
   isOpen = false,
@@ -35,6 +46,7 @@ export const ChatRightDrawer = ({
   isGroup = false,
   groupData = null,
   groupMembers = [],
+  currentUserId,
   partnerUser,
   channelMember,
   isOnline = false,
@@ -45,12 +57,16 @@ export const ChatRightDrawer = ({
   onViewProfile = () => {},
   onViewMemberProfile = () => {},
   onMembersUpdated = () => {},
+  onGroupExit = () => {},
 }) => {
   const [activeTab, setActiveTab] = useState("members"); // 'members' | 'vocab' | 'media' | 'files'
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [selectedFriendIdsToAdd, setSelectedFriendIdsToAdd] = useState([]);
   const [isAddingMembers, setIsAddingMembers] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [groupActionId, setGroupActionId] = useState(null);
+  const [groupConfirmation, setGroupConfirmation] = useState(null);
 
   // 1-on-1 Practice Goals
   const [goals, setGoals] = useState([
@@ -73,6 +89,11 @@ export const ChatRightDrawer = ({
     groupData?.topic || "Collaborative Language Exchange & Practice";
   const targetLang = groupData?.targetLanguage;
   const nativeLang = groupData?.nativeLanguage;
+  const isGroupAdmin = groupMembers.some(
+    (member) =>
+      String(member._id || member.id) === String(currentUserId) &&
+      member.role === "admin"
+  );
 
   // 1-on-1 Partner metadata
   const partnerName =
@@ -131,6 +152,92 @@ export const ChatRightDrawer = ({
     } finally {
       setIsAddingMembers(false);
     }
+  };
+
+  const handleRemoveGroupMember = (member) => {
+    const memberId = String(member._id || member.id);
+    const memberName = member.fullName || member.name || "this member";
+    setGroupConfirmation({
+      title: `Remove ${memberName}?`,
+      description: `They will lose access to ${groupName}. An admin can invite them again later.`,
+      confirmLabel: "Remove member",
+      actionId: memberId,
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          setGroupActionId(memberId);
+          await removeGroupMember(channel.id, memberId);
+          toast.success(`${memberName} removed from the group`);
+          setGroupConfirmation(null);
+          await onMembersUpdated();
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Could not remove this member");
+        } finally {
+          setGroupActionId(null);
+        }
+      },
+    });
+  };
+
+  const handleSetMemberRole = async (member) => {
+    const memberId = String(member._id || member.id);
+    const nextRole = member.role === "admin" ? "member" : "admin";
+    try {
+      setGroupActionId(memberId);
+      await updateGroupMemberRole(channel.id, memberId, nextRole);
+      toast.success(nextRole === "admin" ? "Admin privileges granted" : "Admin privileges removed");
+      await onMembersUpdated();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not update this member's role");
+    } finally {
+      setGroupActionId(null);
+    }
+  };
+
+  const handleLeaveGroup = () => {
+    setGroupConfirmation({
+      title: `Leave ${groupName}?`,
+      description: "You will lose access to the group. You will need an invitation to rejoin.",
+      confirmLabel: "Leave group",
+      actionId: "leave",
+      destructive: false,
+      onConfirm: async () => {
+        try {
+          setGroupActionId("leave");
+          await leaveGroup(channel.id);
+          toast.success(`You left ${groupName}`);
+          setGroupConfirmation(null);
+          onGroupExit(channel.id);
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Could not leave this group");
+        } finally {
+          setGroupActionId(null);
+        }
+      },
+    });
+  };
+
+  const handleDeleteGroup = () => {
+    setGroupConfirmation({
+      title: `Delete ${groupName}?`,
+      description: "This permanently removes the group and its messages for everyone. This action cannot be undone.",
+      confirmLabel: "Delete group",
+      actionId: "delete",
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          setGroupActionId("delete");
+          await deleteGroup(channel.id);
+          toast.success(`${groupName} was deleted`);
+          setGroupConfirmation(null);
+          onGroupExit(channel.id);
+        } catch (error) {
+          toast.error(error.response?.data?.message || "Could not delete this group");
+        } finally {
+          setGroupActionId(null);
+        }
+      },
+    });
   };
 
   // Dynamically extract attachments and links from Stream Channel messages
@@ -322,15 +429,38 @@ export const ChatRightDrawer = ({
                   <Video className="size-3.5" />
                   <span>Video</span>
                 </button>
+                {isGroupAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddMemberOpen(true)}
+                    className="btn btn-sm btn-outline border-base-content/20 hover:border-primary hover:text-primary text-xs font-medium gap-1.5 rounded-xl flex-1"
+                    title="Add friends to group"
+                  >
+                    <UserPlus className="size-3.5 text-primary" />
+                    <span>Add</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-3 flex w-full gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsAddMemberOpen(true)}
-                  className="btn btn-sm btn-outline border-base-content/20 hover:border-primary hover:text-primary text-xs font-medium gap-1.5 rounded-xl flex-1"
-                  title="Add friends to group"
+                  onClick={handleLeaveGroup}
+                  disabled={Boolean(groupActionId)}
+                  className="btn btn-xs flex-1 gap-1.5 rounded-lg border-base-content/15 bg-base-100/70 text-base-content/75"
                 >
-                  <UserPlus className="size-3.5 text-primary" />
-                  <span>Add</span>
+                  <LogOut className="size-3.5" /> Leave group
                 </button>
+                {isGroupAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteGroup}
+                    disabled={Boolean(groupActionId)}
+                    className="btn btn-xs flex-1 gap-1.5 rounded-lg border-error/25 bg-error/10 text-error hover:bg-error hover:text-error-content"
+                  >
+                    <Trash2 className="size-3.5" /> Delete group
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -417,25 +547,30 @@ export const ChatRightDrawer = ({
                   <Users className="size-3.5 text-primary" />
                   <span>Group Members ({groupMembers.length})</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setIsAddMemberOpen(true)}
-                  className="btn btn-xs rounded-xl bg-primary/15 hover:bg-primary/25 text-primary font-bold gap-1"
-                >
-                  <UserPlus className="size-3" />
-                  <span>Add</span>
-                </button>
+                {isGroupAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddMemberOpen(true)}
+                    className="btn btn-xs rounded-xl bg-primary/15 hover:bg-primary/25 text-primary font-bold gap-1"
+                  >
+                    <UserPlus className="size-3" />
+                    <span>Add</span>
+                  </button>
+                )}
               </div>
 
               {/* Member List Cards */}
               <div className="space-y-2">
-                {groupMembers.map((member) => (
-                  <div
-                    key={member._id || member.id}
-                    onClick={() => onViewMemberProfile(member)}
-                    className="p-2.5 rounded-2xl bg-base-100 hover:bg-primary/10 border border-base-content/10 hover:border-primary/30 transition-all cursor-pointer flex items-center justify-between gap-2.5 group shadow-sm"
-                    title={`Click to view ${member.fullName || member.name}'s profile`}
-                  >
+                {groupMembers.map((member) => {
+                  const memberId = String(member._id || member.id);
+                  const isCurrentMember = memberId === String(currentUserId);
+                  return (
+                    <div
+                      key={memberId}
+                      onClick={() => onViewMemberProfile(member)}
+                      className="p-2.5 rounded-2xl bg-base-100 hover:bg-primary/10 border border-base-content/10 hover:border-primary/30 transition-all cursor-pointer flex items-center justify-between gap-2.5 group shadow-sm"
+                      title={`Click to view ${member.fullName || member.name}'s profile`}
+                    >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="relative flex-shrink-0">
                         <Avatar
@@ -465,19 +600,43 @@ export const ChatRightDrawer = ({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewMemberProfile(member);
-                      }}
-                      className="btn btn-ghost btn-circle btn-xs text-base-content/60 group-hover:text-primary group-hover:bg-primary/20"
-                      title="View Profile"
-                    >
-                      <User className="size-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex shrink-0 items-center gap-0.5" onClick={(event) => event.stopPropagation()}>
+                        {isGroupAdmin && !isCurrentMember && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleSetMemberRole(member)}
+                              disabled={groupActionId === memberId}
+                              className="btn btn-ghost btn-circle btn-xs text-amber-500 hover:bg-amber-500/10"
+                              title={member.role === "admin" ? "Remove admin privileges" : "Make group admin"}
+                              aria-label={member.role === "admin" ? `Demote ${member.fullName || member.name}` : `Promote ${member.fullName || member.name}`}
+                            >
+                              <ShieldCheck className="size-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveGroupMember(member)}
+                              disabled={groupActionId === memberId}
+                              className="btn btn-ghost btn-circle btn-xs text-error/70 hover:bg-error/10 hover:text-error"
+                              title="Remove member"
+                              aria-label={`Remove ${member.fullName || member.name} from group`}
+                            >
+                              <UserMinus className="size-3.5" />
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onViewMemberProfile(member)}
+                          className="btn btn-ghost btn-circle btn-xs text-base-content/60 group-hover:text-primary group-hover:bg-primary/20"
+                          title="View Profile"
+                        >
+                          <User className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -547,18 +706,17 @@ export const ChatRightDrawer = ({
             ) : (
               <div className="grid grid-cols-2 gap-2.5">
                 {videoList.slice(0, 4).map((v) => (
-                  <a
+                  <button
                     key={v.id}
-                    href={v.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    type="button"
+                    onClick={() => setPreviewFile({ url: v.url, name: v.name, type: "video" })}
                     className="p-3 rounded-2xl bg-base-100 border border-base-content/10 hover:border-primary/40 hover:shadow-md transition-all flex flex-col justify-between aspect-square group"
                   >
                     <div className="flex items-center justify-between">
                       <div className="w-7 h-7 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
                         <Video className="size-3.5" />
                       </div>
-                      <ArrowUpRight className="size-3.5 text-base-content/40 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      <Video className="size-3.5 text-base-content/40 group-hover:text-primary transition-all" />
                     </div>
                     <div>
                       <p className="text-[11px] font-bold text-base-content truncate group-hover:text-primary transition-colors">
@@ -568,7 +726,7 @@ export const ChatRightDrawer = ({
                         {v.size}
                       </p>
                     </div>
-                  </a>
+                  </button>
                 ))}
               </div>
             )}
@@ -592,11 +750,10 @@ export const ChatRightDrawer = ({
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 {imageList.slice(0, 4).map((img) => (
-                  <a
+                  <button
                     key={img.id}
-                    href={img.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    type="button"
+                    onClick={() => setPreviewFile({ url: img.url, name: img.name, type: "image" })}
                     className="group relative rounded-2xl overflow-hidden aspect-square bg-black/40 block shadow-sm border border-base-content/10"
                   >
                     <img
@@ -604,7 +761,7 @@ export const ChatRightDrawer = ({
                       alt={img.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
-                  </a>
+                  </button>
                 ))}
               </div>
             )}
@@ -632,7 +789,13 @@ export const ChatRightDrawer = ({
                     key={f.id}
                     className="p-2.5 rounded-2xl bg-base-100 border border-base-content/10 flex items-center justify-between gap-2.5 hover:border-primary/40 transition-colors"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewFile({ url: f.url, name: f.name })}
+                      disabled={!f.url}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg text-left disabled:cursor-default"
+                      title={`Preview ${f.name}`}
+                    >
                       <div className="w-8 h-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
                         <FileText className="size-4" />
                       </div>
@@ -644,13 +807,11 @@ export const ChatRightDrawer = ({
                           {f.size} &bull; {formatDate(f.date)}
                         </p>
                       </div>
-                    </div>
+                    </button>
                     {f.url && (
                       <a
                         href={f.url}
                         download={f.name}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="btn btn-ghost btn-circle btn-xs text-base-content/60 hover:text-base-content"
                       >
                         <Download className="size-3.5" />
@@ -773,6 +934,68 @@ export const ChatRightDrawer = ({
           </div>
         </div>
       )}
+
+      {groupConfirmation && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !groupActionId) {
+              setGroupConfirmation(null);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="group-confirmation-title"
+            aria-describedby="group-confirmation-description"
+            className="w-full max-w-sm rounded-2xl border border-base-content/10 bg-base-100 p-5 shadow-2xl"
+          >
+            <div className="mb-4 flex items-start gap-3">
+              <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${groupConfirmation.destructive ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
+                {groupConfirmation.destructive ? <Trash2 className="size-5" /> : <LogOut className="size-5" />}
+              </span>
+              <div className="min-w-0 pt-0.5">
+                <h3 id="group-confirmation-title" className="font-bold text-base-content">
+                  {groupConfirmation.title}
+                </h3>
+                <p id="group-confirmation-description" className="mt-1 text-sm leading-relaxed text-base-content/65">
+                  {groupConfirmation.description}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGroupConfirmation(null)}
+                disabled={Boolean(groupActionId)}
+                className="btn btn-ghost btn-circle btn-xs -mr-2 -mt-2 shrink-0"
+                aria-label="Close confirmation"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-base-content/10 pt-4">
+              <button
+                type="button"
+                onClick={() => setGroupConfirmation(null)}
+                disabled={Boolean(groupActionId)}
+                className="btn btn-ghost btn-sm rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={groupConfirmation.onConfirm}
+                disabled={Boolean(groupActionId)}
+                className={`btn btn-sm min-w-32 rounded-xl font-semibold ${groupConfirmation.destructive ? "bg-error text-error-content hover:bg-error/90" : "btn-primary"}`}
+              >
+                {groupActionId ? <><Loader2 className="size-4 animate-spin" /> Working...</> : groupConfirmation.confirmLabel}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
     </>
   );
 };
