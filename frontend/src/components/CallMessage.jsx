@@ -76,72 +76,70 @@ export const CallMessage = ({ message, isMyMessage, onCallBack }) => {
 
   return (
     <div
-      className={`flex items-center gap-3.5 my-1.5 px-4 py-3 rounded-2xl max-w-sm transition-all shadow-md select-none ${
+      className={`flex items-center gap-2.5 my-1 px-3 py-2 rounded-xl max-w-[280px] transition-all shadow-sm select-none ${
         isMissed
-          ? "mr-auto bg-gradient-to-r from-rose-950/60 to-rose-900/40 border border-rose-500/30 text-rose-100"
+          ? "mr-auto bg-base-100 border border-rose-500/35 text-rose-500"
           : isEnded
           ? isMyMessage
-            ? "ml-auto bg-[#1c1818] border border-emerald-500/30 text-gray-100"
-            : "mr-auto bg-[#1c1818] border border-white/10 text-gray-100"
+            ? "ml-auto bg-base-100 border border-primary/30 text-base-content"
+            : "mr-auto bg-base-100 border border-base-content/12 text-base-content"
           : isMyMessage
-          ? "ml-auto bg-gradient-to-r from-emerald-900/60 to-emerald-800/40 border border-emerald-500/30 text-emerald-50"
-          : "mr-auto bg-[#241e1e] border border-white/10 text-gray-100"
+          ? "ml-auto bg-primary/15 text-primary border border-primary/35"
+          : "mr-auto bg-base-100 border border-base-content/12 text-base-content"
       }`}
     >
       {/* Call Icon Avatar */}
       <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-inner ${
+        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-inner ${
           isMissed
-            ? "bg-rose-500/20 text-rose-400 ring-1 ring-rose-500/30"
+            ? "bg-rose-500/20 text-rose-500 ring-1 ring-rose-500/30"
             : isEnded
-            ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
+            ? "bg-primary/15 text-primary ring-1 ring-primary/30"
             : isMyMessage
-            ? "bg-emerald-500/25 text-emerald-300 ring-1 ring-emerald-500/30"
-            : "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30"
+            ? "bg-primary/25 text-primary ring-1 ring-primary/30"
+            : "bg-primary/20 text-primary ring-1 ring-primary/30"
         }`}
       >
         {isAudio ? (
           isMissed ? (
-            <PhoneMissed className="w-5 h-5 text-rose-400 animate-pulse" />
-          ) : isEnded ? (
-            <Phone className="w-5 h-5 text-emerald-400" />
+            <PhoneMissed className="w-3.5 h-3.5 text-rose-500" />
           ) : isMyMessage ? (
-            <PhoneOutgoing className="w-5 h-5 text-emerald-300" />
+            <PhoneOutgoing className="w-3.5 h-3.5 text-primary" />
           ) : (
-            <PhoneIncoming className="w-5 h-5 text-emerald-400" />
+            <PhoneIncoming className="w-3.5 h-3.5 text-primary" />
           )
         ) : isMissed ? (
-          <VideoOff className="w-5 h-5 text-rose-400 animate-pulse" />
+          <VideoOff className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
         ) : (
-          <Video className="w-5 h-5 text-emerald-400" />
+          <Video className="w-3.5 h-3.5 text-primary" />
         )}
       </div>
 
       {/* Title & Status */}
       <div className="flex flex-col min-w-0 flex-1">
         <span
-          className={`text-[13.5px] font-semibold leading-snug truncate ${
+          className={`text-sm font-bold leading-snug truncate ${
             isMissed
-              ? "text-rose-300"
+              ? "text-rose-500 font-extrabold"
               : isEnded
-              ? "text-gray-100"
+              ? "text-base-content"
               : isMyMessage
-              ? "text-emerald-100"
-              : "text-gray-100"
+              ? "text-base-content font-extrabold"
+              : "text-base-content font-bold"
           }`}
         >
           {title}
         </span>
-        <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mt-0.5">
+        <div className="flex items-center gap-1.5 text-xs text-base-content/80 mt-0.5 font-medium">
           <span>{timeStr}</span>
           <span>&bull;</span>
           <span
             className={
               isMissed
-                ? "text-rose-400 font-medium"
+                ? "text-rose-500 font-semibold"
                 : isEnded
-                ? "text-emerald-400/90 font-medium"
-                : "text-gray-400"
+                ? "text-primary font-semibold"
+                : "text-base-content/85"
             }
           >
             {subtitle}
@@ -156,8 +154,8 @@ export const CallMessage = ({ message, isMyMessage, onCallBack }) => {
           onClick={() => onCallBack(isAudio)}
           className={`btn btn-circle btn-sm border-0 transition-transform active:scale-95 shrink-0 ${
             isMissed
-              ? "bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white"
-              : "bg-emerald-500/20 hover:bg-emerald-600 text-emerald-300 hover:text-white"
+              ? "bg-rose-500/20 hover:bg-rose-600 text-rose-500 hover:text-white"
+              : "bg-primary/20 hover:bg-primary text-primary hover:text-primary-content"
           }`}
           title={isAudio ? "Voice call back" : "Video call back"}
         >

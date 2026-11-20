@@ -53,11 +53,14 @@ export async function signup(req, res) {
             { expiresIn: "7d" }
         );
 
+        const isLocalhost = req.headers.host?.includes("localhost") || req.headers.host?.includes("127.0.0.1");
+        const isSecure = process.env.NODE_ENV === "production" && !isLocalhost;
+
         res.cookie("jwt", token, {
             maxAge: 7 * 24 * 60 * 60 * 1000,
             httpOnly: true,
-            sameSite: "strict",
-            secure: process.env.NODE_ENV === "production",
+            sameSite: isLocalhost ? "lax" : "strict",
+            secure: isSecure,
         });
 
         return res.status(201).json({ success: true, user: newUser });
@@ -86,11 +89,14 @@ export async function login(req, res) {
             expiresIn: "7d",
         });
 
+        const isLocalhost = req.headers.host?.includes("localhost") || req.headers.host?.includes("127.0.0.1");
+        const isSecure = process.env.NODE_ENV === "production" && !isLocalhost;
+
         res.cookie("jwt", token, {
             maxAge: 7 * 24 * 60 * 60 * 1000,
-            httpOnly: true, // prevent XSS attacks,
-            sameSite: "strict", // prevent CSRF attacks
-            secure: process.env.NODE_ENV === "production",
+            httpOnly: true, // prevent XSS attacks
+            sameSite: isLocalhost ? "lax" : "strict",
+            secure: isSecure,
         });
 
         res.status(200).json({ success: true, user });

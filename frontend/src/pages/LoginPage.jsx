@@ -21,12 +21,12 @@ const LoginPage = () => {
 
   return (
     <div
-      className="h-screen flex items-center justify-center p-4 sm:p-6 md:p-8"
+      className="min-h-dvh w-full flex items-stretch justify-center"
       data-theme="forest">
-      <div className="border border-primary/25 flex flex-col lg:flex-row w-full max-w-5xl mx-auto bg-base-100 rounded-xl shadow-lg overflow-hidden">
+      <div className="flex min-h-dvh w-full flex-col bg-base-100 lg:flex-row overflow-hidden">
 
         {/* form */}
-        <div className="w-full lg:w-1/2 p-4 sm:p-8 flex flex-col">
+        <div className="w-full lg:w-1/2 p-4 sm:p-8 flex flex-col justify-center">
           <div className="mb-4 flex items-center justify-start gap-2">
             <img src="/logo.png" alt="hiMEStream logo" className="w-9 h-9 object-contain" />
             <span className="text-3xl font-bold font-mono bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary  tracking-wider">

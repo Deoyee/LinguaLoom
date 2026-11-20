@@ -94,10 +94,10 @@ const ForgotPasswordPage = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8"
+      className="min-h-dvh w-full flex items-stretch justify-center"
       data-theme="forest"
     >
-      <div className="border border-primary/25 flex flex-col lg:flex-row w-full max-w-5xl mx-auto bg-base-100 rounded-xl shadow-lg overflow-hidden">
+      <div className="flex min-h-dvh w-full flex-col bg-base-100 lg:flex-row overflow-hidden">
         
         {/* Form Container */}
         <div className="w-full lg:w-1/2 p-6 sm:p-10 flex flex-col justify-between">

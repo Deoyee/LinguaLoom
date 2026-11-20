@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import useAuthUser from "../hooks/useAuthUser";
+import useOnlineUsers from "../hooks/useOnlineUsers";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
   Channel,
-  ChannelHeader,
   Chat,
   MessageInput,
   MessageList,
@@ -14,29 +14,94 @@ import {
   Window,
 } from "stream-chat-react";
 import { StreamChat } from "stream-chat";
-import { getStreamToken, getUserById, getUserFriends, unfriendUser } from "../lib/api.js";
+import {
+  getStreamToken,
+  getUserById,
+  getUserFriends,
+  getChatHistory,
+  getGroupMembers,
+  unfriendUser,
+} from "../lib/api.js";
 import ChatLoader from "../components/ChatLoader.jsx";
-import CallButton from "../components/CallButton.jsx";
 import CallMessage from "../components/CallMessage.jsx";
 import StickerMessage from "../components/StickerMessage.jsx";
 import CustomAttachmentSelector from "../components/CustomAttachmentSelector.jsx";
 import UserProfileModal from "../components/UserProfileModal.jsx";
 import { useCallStore } from "../store/useCallStore";
 import { promptMediaPermissions } from "../lib/mediaPermissions";
+import { useThemeStore } from "../store/useThemeStore";
+
+// Merged Chat Components
+import ChatSidebar from "../components/chat/ChatSidebar.jsx";
+import ChatHeader from "../components/chat/ChatHeader.jsx";
+import ChatRightDrawer from "../components/chat/ChatRightDrawer.jsx";
+import CustomAttachment from "../components/chat/CustomAttachment.jsx";
 
 const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
 
 const ChatPage = () => {
   const { id: targetUserId } = useParams();
+  const navigate = useNavigate();
 
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const { startCall } = useCallStore();
 
+  // Group vs Direct Detection
+  const isGroup = Boolean(targetUserId?.startsWith("group-"));
+
+  // UI Panels state (Pane 1 mobile drawer, Pane 3 partner/group vault)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setIsRightDrawerOpen(false);
+  }, [targetUserId]);
+
+  // Profile modal state: holds the user object to display in UserProfileModal
+  const [selectedProfileUser, setSelectedProfileUser] = useState(null);
+
+  // Set of message IDs whose timestamp/info is currently toggled on
+  const [infoMessageIds, setInfoMessageIds] = useState(new Set());
+
+  const toggleMessageInfo = useCallback((msgId) => {
+    if (!msgId) return;
+    setInfoMessageIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) {
+        next.delete(msgId);
+      } else {
+        next.add(msgId);
+      }
+      return next;
+    });
+  }, []);
+
+  const { startCall } = useCallStore();
   const queryClient = useQueryClient();
   const { authUser } = useAuthUser();
+  const { isUserOnline } = useOnlineUsers();
+  const { theme } = useThemeStore();
+
+  const isDarkTheme = useMemo(() => {
+    const darkThemes = new Set([
+      "dark",
+      "forest",
+      "synthwave",
+      "halloween",
+      "black",
+      "luxury",
+      "dracula",
+      "business",
+      "night",
+      "coffee",
+      "dim",
+      "sunset",
+    ]);
+    return darkThemes.has(theme);
+  }, [theme]);
+
+  const streamTheme = isDarkTheme ? "str-chat__theme-dark" : "str-chat__theme-light";
 
   const { data: tokenData } = useQuery({
     queryKey: ["streamToken"],
@@ -44,10 +109,11 @@ const ChatPage = () => {
     enabled: !!authUser,
   });
 
+  // Query partner user ONLY for 1-on-1 direct chats
   const { data: partnerUser } = useQuery({
     queryKey: ["user", targetUserId],
     queryFn: () => getUserById(targetUserId),
-    enabled: !!targetUserId,
+    enabled: !isGroup && Boolean(targetUserId && targetUserId.length === 24),
   });
 
   const { data: friends = [] } = useQuery({
@@ -55,7 +121,73 @@ const ChatPage = () => {
     queryFn: getUserFriends,
   });
 
-  const isFriend = Array.isArray(friends) && friends.some((f) => f._id === targetUserId);
+  const { data: chatHistory = [], refetch: refetchChatHistory } = useQuery({
+    queryKey: ["chatHistory"],
+    queryFn: getChatHistory,
+  });
+
+  // Query group members if in a group chat
+  const { data: groupMembers = [], refetch: refetchGroupMembers } = useQuery({
+    queryKey: ["groupMembers", targetUserId],
+    queryFn: () => getGroupMembers(targetUserId),
+    enabled: isGroup && !!targetUserId,
+  });
+
+  // Auto-redirect to first chat if visiting /chat without an id
+  useEffect(() => {
+    if (!targetUserId) {
+      if (chatHistory.length > 0) {
+        const firstChat = chatHistory[0];
+        const nextId = firstChat.isGroup
+          ? firstChat.channelId
+          : firstChat.otherUser?.id;
+        if (nextId) navigate(`/chat/${nextId}`, { replace: true });
+      } else if (friends.length > 0) {
+        navigate(`/chat/${friends[0]._id}`, { replace: true });
+      }
+    }
+  }, [targetUserId, chatHistory, friends, navigate]);
+
+  // Aggregate group metadata
+  const groupData = useMemo(() => {
+    if (!isGroup) return null;
+    const historyItem = chatHistory.find((c) => c.channelId === targetUserId);
+
+    return {
+      id: targetUserId,
+      name:
+        channel?.data?.name ||
+        historyItem?.groupName ||
+        "Language Practice Group",
+      image: channel?.data?.image || historyItem?.groupImage || null,
+      topic:
+        channel?.data?.topic ||
+        historyItem?.topic ||
+        "Language Exchange & Conversation Practice",
+      targetLanguage:
+        channel?.data?.targetLanguage ||
+        historyItem?.targetLanguage ||
+        "Spanish",
+      nativeLanguage:
+        channel?.data?.nativeLanguage ||
+        historyItem?.nativeLanguage ||
+        "English",
+      memberCount:
+        groupMembers.length ||
+        historyItem?.memberCount ||
+        Object.keys(channel?.state?.members || {}).length ||
+        2,
+      members: groupMembers,
+    };
+  }, [isGroup, targetUserId, chatHistory, channel, groupMembers]);
+
+  const isFriend =
+    Array.isArray(friends) &&
+    friends.some(
+      (f) =>
+        String(f._id) ===
+        String(selectedProfileUser?._id || selectedProfileUser?.id)
+    );
 
   const unfriendMutation = useMutation({
     mutationFn: unfriendUser,
@@ -63,13 +195,14 @@ const ChatPage = () => {
       toast.success("Unfriended successfully");
       queryClient.invalidateQueries({ queryKey: ["friends"] });
       queryClient.invalidateQueries({ queryKey: ["user", targetUserId] });
+      queryClient.invalidateQueries({ queryKey: ["chatHistory"] });
     },
     onError: () => {
       toast.error("Failed to unfriend user");
     },
   });
 
-  // Intercept click on call links to open in modal, and click on header to open profile modal
+  // Intercept click on call links to open in modal
   useEffect(() => {
     const handleChatClick = (e) => {
       const anchor = e.target.closest("a");
@@ -82,18 +215,23 @@ const ChatPage = () => {
             const callId = url.pathname.split("/call/")[1];
             const isAudio = url.searchParams.get("type") === "audio";
             if (callId) {
-              setActiveCall({ callId, isAudioOnly: isAudio });
+              startCall({
+                callId,
+                isAudioOnly: isAudio,
+                channelId: channel?.id,
+                channelType: channel?.type,
+                callerName: isGroup
+                  ? groupData?.name
+                  : channel?.state?.members?.[targetUserId]?.user?.name,
+                callerPic: isGroup
+                  ? groupData?.image
+                  : channel?.state?.members?.[targetUserId]?.user?.image,
+              });
             }
           }
         } catch {
           // ignore
         }
-      }
-
-      // Check if clicked on channel header (avatar or name) but not buttons
-      const header = e.target.closest(".str-chat__header-channel");
-      if (header && !e.target.closest("button") && !e.target.closest(".btn")) {
-        setIsProfileModalOpen(true);
       }
     };
 
@@ -101,34 +239,48 @@ const ChatPage = () => {
     return () => {
       document.removeEventListener("click", handleChatClick, true);
     };
-  }, []);
+  }, [channel, startCall, targetUserId, isGroup, groupData]);
 
+  // Initialize Stream Chat Channel (handles both Direct and Groups)
   useEffect(() => {
+    let isCancelled = false;
+
     const initChat = async () => {
-      if (!tokenData?.token || !authUser) return;
+      if (!tokenData?.token || !authUser || !targetUserId) return;
 
       try {
-        console.log("Initializing stream chat client...");
+        setLoading(true);
 
         const client = StreamChat.getInstance(STREAM_API_KEY);
 
-        await client.connectUser(
-          {
-            id: authUser._id,
-            name: authUser.fullName,
-            image: authUser.profilePic,
-          },
-          tokenData.token
-        );
+        // Connect user if not connected yet
+        if (!client.userID) {
+          await client.connectUser(
+            {
+              id: authUser._id,
+              name: authUser.fullName,
+              image: authUser.profilePic,
+            },
+            tokenData.token
+          );
+        }
 
-        const channelId = [authUser._id, targetUserId].sort().join("-");
-        // if i start the chat => channelId: [myId, yourId] no matter who starts the chat
+        let currChannel;
 
-        const currChannel = client.channel("messaging", channelId, {
-          members: [authUser._id, targetUserId],
-        });
+        if (isGroup) {
+          // Group Channel: query or watch directly by channel id
+          currChannel = client.channel("messaging", targetUserId);
+        } else {
+          // Direct 1-on-1 Channel: deterministic channelId
+          const channelId = [authUser._id, targetUserId].sort().join("-");
+          currChannel = client.channel("messaging", channelId, {
+            members: [authUser._id, targetUserId],
+          });
+        }
 
         await currChannel.watch();
+
+        if (isCancelled) return;
 
         // Ensure fresh app settings with updated 100MB limit are loaded in browser
         client.appSettingsPromise = client.getAppSettings();
@@ -144,7 +296,10 @@ const ChatPage = () => {
                   `"${file.name}" (${sizeMB}MB) exceeds the 100MB allowed limit. Maximum allowed is 100MB.`,
                   { id: "file-size-limit", duration: 6000 }
                 );
-              } else if (file.type.startsWith("video/") && file.size > 10 * 1024 * 1024) {
+              } else if (
+                file.type.startsWith("video/") &&
+                file.size > 10 * 1024 * 1024
+              ) {
                 toast(
                   `"${file.name}" is ${sizeMB}MB. Allowed up to 100MB (keep videos under 10MB for fast sending).`,
                   {
@@ -162,44 +317,53 @@ const ChatPage = () => {
 
         // Subscribe to upload/attachment notifications so user gets instant toast feedback
         let lastNotifId = null;
-        const unsubscribeNotifications = client.notifications?.store?.subscribe?.((state) => {
-          const notifications = state?.notifications || [];
-          if (notifications.length > 0) {
-            const latest = notifications[notifications.length - 1];
-            if (latest && latest.id !== lastNotifId) {
-              lastNotifId = latest.id;
-              if (latest.severity === "error") {
-                if (latest.type?.includes("upload:blocked")) {
-                  const reason = latest.metadata?.reason;
-                  if (reason === "size_limit") {
-                    toast.error("File exceeds the allowed size limit. Maximum allowed is 100MB.", { id: "upload-blocked" });
-                  } else if (reason?.includes("extension") || reason?.includes("mime")) {
-                    toast.error("This file format is not supported.", { id: "upload-blocked" });
-                  } else {
-                    toast.error(`Upload blocked: ${reason || "Invalid file"}`, { id: "upload-blocked" });
+        const unsubscribeNotifications = client.notifications?.store?.subscribe?.(
+          (state) => {
+            const notifications = state?.notifications || [];
+            if (notifications.length > 0) {
+              const latest = notifications[notifications.length - 1];
+              if (latest && latest.id !== lastNotifId) {
+                lastNotifId = latest.id;
+                if (latest.severity === "error") {
+                  if (latest.type?.includes("upload:blocked")) {
+                    const reason = latest.metadata?.reason;
+                    if (reason === "size_limit") {
+                      toast.error(
+                        "File exceeds the allowed size limit. Maximum allowed is 100MB.",
+                        { id: "upload-blocked" }
+                      );
+                    } else if (
+                      reason?.includes("extension") ||
+                      reason?.includes("mime")
+                    ) {
+                      toast.error("This file format is not supported.", {
+                        id: "upload-blocked",
+                      });
+                    } else {
+                      toast.error(`Upload blocked: ${reason || "Invalid file"}`, {
+                        id: "upload-blocked",
+                      });
+                    }
+                  } else if (latest.type?.includes("upload:failed")) {
+                    const rawReason =
+                      latest.metadata?.reason || latest.message || "";
+                    if (rawReason.toLowerCase().includes("timeout")) {
+                      toast.error(
+                        "Upload timed out. Allowed limit is 100MB (keep videos under 10MB for fast sending).",
+                        { id: "upload-failed", duration: 6000 }
+                      );
+                    } else {
+                      toast.error(
+                        `Upload failed: ${rawReason || "Failed to upload file"}`,
+                        { id: "upload-failed" }
+                      );
+                    }
                   }
-                } else if (latest.type?.includes("upload:failed")) {
-                  const rawReason = latest.metadata?.reason || latest.message || "";
-                  if (rawReason.toLowerCase().includes("timeout")) {
-                    toast.error("Upload timed out. Allowed limit is 100MB (keep videos under 10MB for fast sending).", {
-                      id: "upload-failed",
-                      duration: 6000,
-                    });
-                  } else {
-                    toast.error(`Upload failed: ${rawReason || "Failed to upload file"}`, { id: "upload-failed" });
-                  }
-                }
-              } else if (latest.severity === "warning") {
-                if (latest.type?.includes("upload:in-progress") || latest.message?.includes("upload")) {
-                  toast("Please wait for the file to finish uploading before sending.", {
-                    icon: "⏳",
-                    id: "upload-in-progress",
-                  });
                 }
               }
             }
           }
-        });
+        );
 
         setChatClient(client);
         setChannel(currChannel);
@@ -212,65 +376,86 @@ const ChatPage = () => {
         console.error("Error initializing chat:", error);
         toast.error("Could not connect to chat. Please try again.");
       } finally {
-        setLoading(false);
+        if (!isCancelled) setLoading(false);
       }
     };
 
     initChat();
-  }, [tokenData, authUser, targetUserId]);
 
+    return () => {
+      isCancelled = true;
+    };
+  }, [tokenData, authUser, targetUserId, isGroup]);
+
+  // Video call / Lounge
   const handleVideoCall = useCallback(async () => {
     if (channel) {
       const callSessionId = `${channel.id}-${Date.now()}`;
-
-      // Proactively trigger browser permission prompt for camera and microphone
       promptMediaPermissions(false);
 
       channel.sendMessage({
-        text: "📹 Video call",
+        text: isGroup ? "📹 Group Video Lounge Started" : "📹 Video call",
         call_id: callSessionId,
         call_type: "video",
         call_status: "started",
       });
 
-      toast.success("Video call started!");
+      toast.success(
+        isGroup ? "Group Video Lounge started! 🎉" : "Video call started!"
+      );
+
       startCall({
         callId: callSessionId,
         isAudioOnly: false,
         channelId: channel.id,
         channelType: channel.type,
-        callerName: channel?.state?.members?.[targetUserId]?.user?.name,
-        callerPic: channel?.state?.members?.[targetUserId]?.user?.image,
+        callerName: isGroup
+          ? groupData?.name
+          : channel?.state?.members?.[targetUserId]?.user?.name ||
+            partnerUser?.fullName,
+        callerPic: isGroup
+          ? groupData?.image
+          : channel?.state?.members?.[targetUserId]?.user?.image ||
+            partnerUser?.profilePic,
       });
     }
-  }, [channel, startCall, targetUserId]);
+  }, [channel, startCall, isGroup, groupData, targetUserId, partnerUser]);
 
+  // Voice call / Lounge
   const handleVoiceCall = useCallback(async () => {
     if (channel) {
       const callSessionId = `${channel.id}-${Date.now()}`;
-
-      // Proactively trigger browser permission prompt for microphone
       promptMediaPermissions(true);
 
       channel.sendMessage({
-        text: "📞 Voice call",
+        text: isGroup ? "📞 Group Voice Lounge Started" : "📞 Voice call",
         call_id: callSessionId,
         call_type: "audio",
         call_status: "started",
       });
 
-      toast.success("Voice call started!");
+      toast.success(
+        isGroup ? "Group Voice Lounge started! 🎙️" : "Voice call started!"
+      );
+
       startCall({
         callId: callSessionId,
         isAudioOnly: true,
         channelId: channel.id,
         channelType: channel.type,
-        callerName: channel?.state?.members?.[targetUserId]?.user?.name,
-        callerPic: channel?.state?.members?.[targetUserId]?.user?.image,
+        callerName: isGroup
+          ? groupData?.name
+          : channel?.state?.members?.[targetUserId]?.user?.name ||
+            partnerUser?.fullName,
+        callerPic: isGroup
+          ? groupData?.image
+          : channel?.state?.members?.[targetUserId]?.user?.image ||
+            partnerUser?.profilePic,
       });
     }
-  }, [channel, startCall, targetUserId]);
+  }, [channel, startCall, isGroup, groupData, targetUserId, partnerUser]);
 
+  // Custom Message Renderer with Audio Waveform, Video Cards & File Chips
   const CustomMessage = useCallback(
     (props) => {
       const { message, isMyMessage } = props;
@@ -296,7 +481,10 @@ const ChatPage = () => {
       const isMine =
         typeof isMyMessage === "function"
           ? isMyMessage()
-          : Boolean(isMyMessage ?? (message?.user?.id === (authUser?._id || authUser?.id)));
+          : Boolean(
+              isMyMessage ??
+                (message?.user?.id === (authUser?._id || authUser?.id))
+            );
 
       // Check if message is a sticker
       const isSticker =
@@ -325,9 +513,72 @@ const ChatPage = () => {
         );
       }
 
-      return <MessageSimple {...props} />;
+      const isInfoVisible = infoMessageIds.has(message?.id);
+
+      return (
+        <div
+          className={`custom-msg-wrapper ${
+            isInfoVisible ? "show-time str-chat__message--show-info" : ""
+          }`}
+          onClick={(e) => {
+            if (
+              e.target.closest("a") ||
+              e.target.closest("button") ||
+              e.target.closest(".str-chat__message-options") ||
+              e.target.closest(".str-chat__message-actions-box")
+            ) {
+              return;
+            }
+            if (
+              e.target.closest(".str-chat__message-bubble") ||
+              e.target.closest(".str-chat__message-text") ||
+              e.target.closest(".str-chat__message-status")
+            ) {
+              toggleMessageInfo(message?.id);
+            }
+          }}
+        >
+          <MessageSimple
+            {...props}
+            Attachment={(attProps) => (
+              <CustomAttachment {...attProps} isMyMessage={isMine} />
+            )}
+          />
+        </div>
+      );
     },
-    [handleVoiceCall, handleVideoCall, authUser]
+    [handleVoiceCall, handleVideoCall, authUser, infoMessageIds, toggleMessageInfo]
+  );
+
+  const customMessageActions = useMemo(
+    () => ({
+      "Message Info": (msg) => {
+        toggleMessageInfo(msg.id);
+        const time = msg.created_at
+          ? new Date(msg.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "Recently";
+        const date = msg.created_at
+          ? new Date(msg.created_at).toLocaleDateString([], {
+              month: "short",
+              day: "numeric",
+            })
+          : "Today";
+        const status =
+          msg.status === "received"
+            ? "Delivered"
+            : msg.status === "sending"
+            ? "Sending..."
+            : "Sent";
+        toast(`Sent: ${date} at ${time} • ${status}`, {
+          icon: "ℹ️",
+          duration: 3500,
+        });
+      },
+    }),
+    [toggleMessageInfo]
   );
 
   const audioRecordingConfig = useMemo(
@@ -337,7 +588,6 @@ const ChatPage = () => {
       },
       transcoderConfig: {
         sampleRate: 48000,
-        // Pass-through encoder preserves native 48kHz WebM/Opus audio, eliminating 16kHz downsampling stutters and skipped audio
         encoder: async (file) => file,
       },
     }),
@@ -347,69 +597,137 @@ const ChatPage = () => {
   if (loading || !chatClient || !channel) return <ChatLoader />;
 
   return (
-    <div className="h-full w-full flex flex-col flex-1 min-h-0 bg-base-100 overflow-hidden m-0 p-0">
-      <Chat client={chatClient} theme="str-chat__theme-dark">
-        <Channel
-          channel={channel}
-          Message={CustomMessage}
-          AttachmentSelector={CustomAttachmentSelector}
-        >
-          <div className="w-full h-full relative flex flex-col flex-1 min-h-0">
-            <CallButton
-              handleVideoCall={handleVideoCall}
-              handleVoiceCall={handleVoiceCall}
-              handleViewProfile={() => setIsProfileModalOpen(true)}
-            />
-            <Window>
-              <ChannelHeader />
-              <MessageList Message={CustomMessage} />
-              <div className="relative flex flex-col">
-                <MessageInput
-                  focus
-                  audioRecordingEnabled={true}
-                  audioRecordingConfig={audioRecordingConfig}
-                />
-                <div className="px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-400 bg-[#191515] border-t border-white/5 select-none">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>
-                      Allowed size: <strong className="text-gray-200 font-medium">100 MB</strong> per file &bull; Videos under <strong className="text-gray-200 font-medium">10 MB</strong> recommended
+    <div className="h-full w-full flex flex-row flex-1 min-h-0 bg-base-100 overflow-hidden m-0 p-0 relative">
+      {/* ======================================================== */}
+      {/* PANE 1: CURVED SIDEBAR (CLUBS & DIRECT CHATS)             */}
+      {/* ======================================================== */}
+      <ChatSidebar
+        currentUserId={authUser?._id}
+        targetUserId={targetUserId}
+        friends={friends}
+        chatHistory={chatHistory}
+        isOpenOnMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+      />
+
+      {/* ======================================================== */}
+      {/* PANE 2: MAIN CONVERSATION CANVAS                         */}
+      {/* ======================================================== */}
+      <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 bg-base-100 relative overflow-hidden">
+        <Chat client={chatClient} theme={streamTheme}>
+          <Channel
+            channel={channel}
+            Message={CustomMessage}
+            Attachment={CustomAttachment}
+            AttachmentSelector={CustomAttachmentSelector}
+            customMessageActions={customMessageActions}
+          >
+            <div className="w-full h-full relative flex flex-col flex-1 min-h-0">
+              {/* Header with Group Avatar Stack, Calling, & Controls */}
+              <ChatHeader
+                isGroup={isGroup}
+                groupData={groupData}
+                partnerUser={partnerUser}
+                channelMember={channel?.state?.members?.[targetUserId]}
+                channelMembers={groupMembers}
+                isOnline={isGroup ? false : isUserOnline(targetUserId)}
+                onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
+                onToggleRightDrawer={() => setIsRightDrawerOpen((prev) => !prev)}
+                isRightDrawerOpen={isRightDrawerOpen}
+                onVoiceCall={handleVoiceCall}
+                onVideoCall={handleVideoCall}
+                onViewMemberProfile={(member) => setSelectedProfileUser(member)}
+              />
+
+              <Window>
+                <MessageList Message={CustomMessage} />
+
+                {/* Floating Modern Message Input */}
+                <div className="relative flex flex-col">
+                  <MessageInput
+                    focus
+                    audioRecordingEnabled={true}
+                    audioRecordingConfig={audioRecordingConfig}
+                  />
+                  <div className="px-4 py-1.5 flex items-center justify-between text-xs text-base-content/85 bg-base-200 border-t border-base-content/10 select-none font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>
+                        Allowed size:{" "}
+                        <strong className="text-base-content font-bold">
+                          100 MB
+                        </strong>{" "}
+                        per file &bull; Videos under{" "}
+                        <strong className="text-base-content font-bold">
+                          10 MB
+                        </strong>{" "}
+                        recommended
+                      </span>
                     </span>
-                  </span>
-                  <span className="hidden sm:inline-block text-[10px] text-gray-500">
-                    Supports: JPG, PNG, GIF, MP4, PDF, DOCX, ZIP & more
-                  </span>
+                    <span className="hidden sm:inline-block text-xs text-base-content/70">
+                      Supports: JPG, PNG, GIF, MP4, PDF, DOCX, ZIP & more
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </Window>
-          </div>
-          <Thread />
-        </Channel>
-      </Chat>
+              </Window>
+            </div>
+            <Thread />
+          </Channel>
+        </Chat>
+      </div>
 
+      {/* ======================================================== */}
+      {/* PANE 3: ALL MEMBERS, VOCAB BANK & SHARED MEDIA (2x2)    */}
+      {/* ======================================================== */}
+      <ChatRightDrawer
+        isOpen={isRightDrawerOpen}
+        onClose={() => setIsRightDrawerOpen(false)}
+        isGroup={isGroup}
+        groupData={groupData}
+        groupMembers={groupMembers}
+        partnerUser={partnerUser}
+        channelMember={channel?.state?.members?.[targetUserId]}
+        isOnline={isGroup ? false : isUserOnline(targetUserId)}
+        channel={channel}
+        friends={friends}
+        onVoiceCall={handleVoiceCall}
+        onVideoCall={handleVideoCall}
+        onViewProfile={() => setSelectedProfileUser(partnerUser)}
+        onViewMemberProfile={(member) => setSelectedProfileUser(member)}
+        onMembersUpdated={() => {
+          refetchGroupMembers();
+          refetchChatHistory();
+        }}
+      />
 
-
-      {/* User Profile Modal */}
-      {isProfileModalOpen && (
+      {/* ======================================================== */}
+      {/* USER PROFILE MODAL (CLICK ANY GROUP MEMBER OR PARTNER)  */}
+      {/* ======================================================== */}
+      {selectedProfileUser && (
         <UserProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
-          user={
-            partnerUser ||
-            (channel?.state?.members?.[targetUserId]?.user
-              ? {
-                  _id: targetUserId,
-                  fullName: channel.state.members[targetUserId].user.name,
-                  profilePic: channel.state.members[targetUserId].user.image,
-                }
-              : null)
-          }
+          isOpen={Boolean(selectedProfileUser)}
+          onClose={() => setSelectedProfileUser(null)}
+          user={{
+            _id: selectedProfileUser._id || selectedProfileUser.id,
+            fullName:
+              selectedProfileUser.fullName ||
+              selectedProfileUser.name ||
+              "Language Partner",
+            profilePic:
+              selectedProfileUser.profilePic || selectedProfileUser.image,
+            bio: selectedProfileUser.bio,
+            nativeLanguage: selectedProfileUser.nativeLanguage,
+            learningLanguage: selectedProfileUser.learningLanguage,
+            location: selectedProfileUser.location,
+            city: selectedProfileUser.city,
+            createdAt: selectedProfileUser.createdAt,
+          }}
           isFriend={isFriend}
-          onUnfriend={(u) => unfriendMutation.mutate(u._id)}
+          onUnfriend={(u) => unfriendMutation.mutate(u._id || u.id)}
         />
       )}
     </div>
   );
-}
+};
 
 export default ChatPage;

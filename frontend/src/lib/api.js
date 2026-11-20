@@ -104,3 +104,20 @@ export async function getChatHistory() {
   const response = await axiosInstance.get("/chat/history");
   return response.data;
 }
+
+export async function createGroup(groupData) {
+  const response = await axiosInstance.post("/chat/group", groupData);
+  return response.data;
+}
+
+export async function getGroupMembers(channelId) {
+  const response = await axiosInstance.get(`/chat/group/${channelId}/members`);
+  return response.data;
+}
+
+export async function addGroupMembers(channelId, memberIds) {
+  const response = await axiosInstance.post(`/chat/group/${channelId}/members`, {
+    memberIds,
+  });
+  return response.data;
+}
