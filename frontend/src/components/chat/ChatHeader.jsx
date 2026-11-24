@@ -83,7 +83,7 @@ export const ChatHeader = ({
                 {groupName}
               </h3>
 
-              {targetLang && (
+              {targetLang ? (
                 <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/15 text-primary border border-primary/25 flex-shrink-0">
                   <span>{getLanguageFlag(targetLang)}</span>
                   <span>{targetLang}</span>
@@ -94,6 +94,11 @@ export const ChatHeader = ({
                       <span>{nativeLang}</span>
                     </>
                   )}
+                </span>
+              ) : (
+                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-base-300 text-base-content/75 border border-base-content/15 flex-shrink-0">
+                  <Users className="size-3 text-secondary" />
+                  <span>General Group</span>
                 </span>
               )}
             </div>

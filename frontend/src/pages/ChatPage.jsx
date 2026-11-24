@@ -423,6 +423,27 @@ const ChatPage = () => {
     };
   }, [tokenData, authUser, targetUserId, isGroup]);
 
+  // Keep chatHistory fresh in real time when messages or channel state changes
+  useEffect(() => {
+    if (!chatClient) return;
+
+    const handleStreamUpdate = () => {
+      refetchChatHistory();
+    };
+
+    chatClient.on("message.new", handleStreamUpdate);
+    chatClient.on("notification.message_new", handleStreamUpdate);
+    chatClient.on("notification.added_to_channel", handleStreamUpdate);
+    chatClient.on("channel.updated", handleStreamUpdate);
+
+    return () => {
+      chatClient.off("message.new", handleStreamUpdate);
+      chatClient.off("notification.message_new", handleStreamUpdate);
+      chatClient.off("notification.added_to_channel", handleStreamUpdate);
+      chatClient.off("channel.updated", handleStreamUpdate);
+    };
+  }, [chatClient, refetchChatHistory]);
+
   const beginOutgoingCall = useCallback(async (isAudioOnly) => {
     if (!channel) return;
 
@@ -619,6 +640,7 @@ const ChatPage = () => {
         targetUserId={targetUserId}
         friends={friends}
         chatHistory={chatHistory}
+        activeGroupData={groupData}
         isOpenOnMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />

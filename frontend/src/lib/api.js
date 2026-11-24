@@ -60,6 +60,11 @@ export async function sendFriendRequest(userId) {
   return response.data;
 }
 
+export async function generatePracticeLessonApi(data) {
+  const response = await axiosInstance.post("/practice/generate", data);
+  return response.data;
+}
+
 export async function getFriendRequests() {
   const response = await axiosInstance.get("/users/friend-requests");
   return response.data;

@@ -6,8 +6,9 @@ import { LANGUAGES } from "../../constants";
 import { capitialize } from "../../lib/utils";
 import { createGroup } from "../../lib/api.js";
 import toast from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
-const PRESET_ICONS = ["🌐", "🇪🇸", "🇫🇷", "🇯🇵", "🇩🇪", "🇮🇹", "🗣️", "☕", "📚", "🚀"];
+const PRESET_ICONS = ["🌐", "🇪🇸", "🇫🇷", "🇯🇵", "🇩🇪", "🇮🇹", "🗣️", "☕", "📚", "🚀", "💡", "🎉"];
 
 export const CreateGroupModal = ({
   isOpen = false,
@@ -15,8 +16,10 @@ export const CreateGroupModal = ({
   friends = [],
   onGroupCreated = () => {},
 }) => {
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
+  const [isPracticeGroup, setIsPracticeGroup] = useState(true);
   const [targetLanguage, setTargetLanguage] = useState("Spanish");
   const [nativeLanguage, setNativeLanguage] = useState("English");
   const [selectedEmoji, setSelectedEmoji] = useState("🗣️");
@@ -55,15 +58,51 @@ export const CreateGroupModal = ({
 
     try {
       setIsSubmitting(true);
+      const isPractice = Boolean(isPracticeGroup);
+      const fullGroupName = `${selectedEmoji} ${name.trim()}`;
+      const groupTopic = topic.trim() || (isPractice ? `Language practice for ${targetLanguage} and ${nativeLanguage}` : "General group conversation & hangout");
+
       const res = await createGroup({
-        name: `${selectedEmoji} ${name.trim()}`,
-        topic: topic.trim() || `Language practice for ${targetLanguage} and ${nativeLanguage}`,
-        targetLanguage,
-        nativeLanguage,
+        name: fullGroupName,
+        topic: groupTopic,
+        targetLanguage: isPractice ? targetLanguage : "",
+        nativeLanguage: isPractice ? nativeLanguage : "",
+        isPracticeGroup: isPractice,
         memberIds: selectedMemberIds,
       });
 
       toast.success("Group created successfully! 🎉");
+
+      // Optimistically update chatHistory so the sidebar immediately displays the new group
+      if (res?.channelId) {
+        queryClient.setQueryData(["chatHistory"], (old = []) => {
+          const newGroupEntry = {
+            channelId: res.channelId,
+            isGroup: true,
+            groupName: fullGroupName,
+            groupImage: null,
+            topic: groupTopic,
+            targetLanguage: isPractice ? targetLanguage : "",
+            nativeLanguage: isPractice ? nativeLanguage : "",
+            isPracticeGroup: isPractice,
+            memberCount: selectedMemberIds.length + 1,
+            members: [],
+            lastMessage: {
+              text: isPractice
+                ? `🎉 Welcome to ${name.trim()}! Start practicing together.`
+                : `🎉 Welcome to ${name.trim()}! Glad to have everyone here.`,
+              created_at: new Date().toISOString(),
+            },
+            lastMessageAt: new Date().toISOString(),
+            unread_count: 0,
+          };
+          return [newGroupEntry, ...old.filter((c) => c.channelId !== res.channelId)];
+        });
+
+        // Invalidate background query
+        queryClient.invalidateQueries({ queryKey: ["chatHistory"] });
+      }
+
       setName("");
       setTopic("");
       setSelectedMemberIds([]);
@@ -98,10 +137,12 @@ export const CreateGroupModal = ({
             </div>
             <div>
               <h3 className="font-bold text-base text-base-content">
-                Create Language Group
+                {isPracticeGroup ? "Create Language Group" : "Create Group"}
               </h3>
               <p className="text-xs text-base-content/60">
-                Connect friends for collaborative practice
+                {isPracticeGroup
+                  ? "Connect friends for collaborative practice"
+                  : "Connect friends, committees, or project teams"}
               </p>
             </div>
           </div>
@@ -116,6 +157,50 @@ export const CreateGroupModal = ({
 
         {/* Form Body */}
         <form onSubmit={handleCreate} className="p-5 overflow-y-auto space-y-4 text-xs">
+          {/* Group Purpose Selector (Practice vs General) */}
+          <div>
+            <label className="block font-bold text-base-content mb-1.5">
+              Group Type
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPracticeGroup(true)}
+                className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                  isPracticeGroup
+                    ? "border-primary bg-primary/10 text-primary shadow-sm"
+                    : "border-base-content/15 bg-base-100 hover:bg-base-300/40 text-base-content/75"
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs">
+                  <Sparkles className="size-3.5 text-primary" />
+                  <span>Language Practice</span>
+                </div>
+                <p className="text-[11px] text-base-content/60 mt-1 font-normal">
+                  Target & practice languages
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPracticeGroup(false)}
+                className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                  !isPracticeGroup
+                    ? "border-primary bg-primary/10 text-primary shadow-sm"
+                    : "border-base-content/15 bg-base-100 hover:bg-base-300/40 text-base-content/75"
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold text-xs">
+                  <Users className="size-3.5 text-secondary" />
+                  <span>General Group</span>
+                </div>
+                <p className="text-[11px] text-base-content/60 mt-1 font-normal">
+                  Committees, hangouts & teams
+                </p>
+              </button>
+            </div>
+          </div>
+
           {/* Group Icon Picker & Name */}
           <div>
             <label className="block font-bold text-base-content mb-1.5">
@@ -152,7 +237,11 @@ export const CreateGroupModal = ({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Madrid Polyglots Club"
+                placeholder={
+                  isPracticeGroup
+                    ? "e.g. Madrid Polyglots Club"
+                    : "e.g. Church Committee, Book Club"
+                }
                 className="flex-1 input input-bordered h-11 rounded-2xl bg-base-100 border-base-content/20 text-base-content focus:border-primary text-xs shadow-inner"
                 maxLength={45}
                 required
@@ -169,48 +258,61 @@ export const CreateGroupModal = ({
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. Daily travel stories, vocabulary exchange & coffee chats"
+              placeholder={
+                isPracticeGroup
+                  ? "e.g. Daily travel stories, vocabulary exchange & coffee chats"
+                  : "e.g. Website updates, weekly meetings, planning"
+              }
               className="w-full input input-bordered h-10 rounded-2xl bg-base-100 border-base-content/20 text-base-content focus:border-primary text-xs"
               maxLength={120}
             />
           </div>
 
-          {/* Target & Practice Languages */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-bold text-base-content mb-1.5">
-                Target Language
-              </label>
-              <select
-                value={targetLanguage}
-                onChange={(e) => setTargetLanguage(e.target.value)}
-                className="w-full select select-bordered select-sm rounded-xl bg-base-100 border-base-content/20 text-xs"
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {getLanguageFlag(lang)} {capitialize(lang)}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Target & Practice Languages (Only for Practice Groups) */}
+          {isPracticeGroup ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-bold text-base-content mb-1.5">
+                  Target Language
+                </label>
+                <select
+                  value={targetLanguage}
+                  onChange={(e) => setTargetLanguage(e.target.value)}
+                  className="w-full select select-bordered select-sm rounded-xl bg-base-100 border-base-content/20 text-xs"
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {getLanguageFlag(lang)} {capitialize(lang)}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="block font-bold text-base-content mb-1.5">
-                Practice Language
-              </label>
-              <select
-                value={nativeLanguage}
-                onChange={(e) => setNativeLanguage(e.target.value)}
-                className="w-full select select-bordered select-sm rounded-xl bg-base-100 border-base-content/20 text-xs"
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {getLanguageFlag(lang)} {capitialize(lang)}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="block font-bold text-base-content mb-1.5">
+                  Practice Language
+                </label>
+                <select
+                  value={nativeLanguage}
+                  onChange={(e) => setNativeLanguage(e.target.value)}
+                  className="w-full select select-bordered select-sm rounded-xl bg-base-100 border-base-content/20 text-xs"
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {getLanguageFlag(lang)} {capitialize(lang)}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-3 rounded-2xl bg-base-100/70 border border-base-content/10 flex items-center gap-2.5 text-base-content/70">
+              <Globe className="size-4 text-primary flex-shrink-0" />
+              <span className="text-[11px] leading-relaxed">
+                This is a <strong>General Group</strong>. No language practice requirements or practice language tags are attached.
+              </span>
+            </div>
+          )}
 
           {/* Add Members Section */}
           <div className="space-y-2 pt-1 border-t border-base-content/10">

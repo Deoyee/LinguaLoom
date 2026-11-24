@@ -22,6 +22,7 @@ export const ChatSidebar = ({
   targetUserId,
   friends = [],
   chatHistory = [],
+  activeGroupData = null,
   isOpenOnMobile = false,
   onCloseMobile = () => {},
   onOpenCreateGroup = null,
@@ -75,9 +76,15 @@ export const ChatSidebar = ({
             memberCount: chat.memberCount || chat.members?.length || 2,
             topic: chat.topic || "",
             targetLanguage: chat.targetLanguage || "",
+            nativeLanguage: chat.nativeLanguage || "",
+            isPracticeGroup: Boolean(chat.targetLanguage),
             lastMessage:
               chat.lastMessage?.text ||
-              (chat.lastMessage?.call_id ? "📞 Voice lounge activity" : "Start practicing together!"),
+              (chat.lastMessage?.call_id
+                ? "📞 Voice lounge activity"
+                : Boolean(chat.targetLanguage)
+                ? "Start practicing together!"
+                : "Start chatting!"),
             lastMessageAt: chat.lastMessageAt || chat.lastMessage?.created_at,
             unreadCount: chat.unread_count || 0,
           });
@@ -125,8 +132,32 @@ export const ChatSidebar = ({
       }
     });
 
+    // If current target is an active group channel not yet indexed in chatHistory, unshift it so it always shows
+    if (
+      targetUserId &&
+      targetUserId.startsWith("group-") &&
+      !seenGroupIds.has(targetUserId)
+    ) {
+      seenGroupIds.add(targetUserId);
+      groups.unshift({
+        id: targetUserId,
+        channelId: targetUserId,
+        isGroup: true,
+        name: activeGroupData?.name || "Group Chat",
+        image: activeGroupData?.image || null,
+        memberCount: activeGroupData?.memberCount || 2,
+        topic: activeGroupData?.topic || "",
+        targetLanguage: activeGroupData?.targetLanguage || "",
+        nativeLanguage: activeGroupData?.nativeLanguage || "",
+        isPracticeGroup: Boolean(activeGroupData?.targetLanguage),
+        lastMessage: "Start chatting!",
+        lastMessageAt: new Date().toISOString(),
+        unreadCount: 0,
+      });
+    }
+
     return { groupChats: groups, directChats: directs };
-  }, [chatHistory, friends, friendsMap]);
+  }, [chatHistory, friends, friendsMap, targetUserId, activeGroupData]);
 
   // Filtered lists
   const filteredGroups = useMemo(() => {
@@ -336,7 +367,7 @@ export const ChatSidebar = ({
                   ) : (
                     <ChevronRight className="size-4" />
                   )}
-                  <span>Language Clubs ({filteredGroups.length})</span>
+                  <span>Language Clubs & Groups ({filteredGroups.length})</span>
                 </div>
 
                 <button
