@@ -51,11 +51,11 @@ export async function getStreamToken(req, res) {
 
 export async function getChatHistory(req, res) {
   try {
-    const userId = req.user._id.toString();
+    const userId = getUserId(req);
     
     // Get all channels where the current user is a member
     const filter = { members: { $in: [userId] }, type: 'messaging' };
-    const sort = [{ last_message_at: -1 }];
+    const sort = [{ last_message_at: -1 }, { updated_at: -1 }];
     
     const channels = await streamClient.queryChannels(filter, sort, {
       limit: 50,
@@ -87,13 +87,14 @@ export async function getChatHistory(req, res) {
       return {
         channelId: channel.id,
         lastMessage: channel.state.messages[channel.state.messages.length - 1],
-        lastMessageAt: channel.last_message_at,
+        lastMessageAt: channel.last_message_at || channel.data.updated_at || channel.data.created_at,
         isGroup,
         groupName: channel.data.name || (isGroup ? "Group Chat" : null),
         groupImage: channel.data.image || null,
         topic: channel.data.topic || "",
         targetLanguage: channel.data.targetLanguage || "",
         nativeLanguage: channel.data.nativeLanguage || "",
+        isPracticeGroup: Boolean(channel.data.is_practice ?? channel.data.targetLanguage),
         memberCount: membersList.length,
         members: membersList,
         otherUser: otherMember ? {
@@ -114,13 +115,22 @@ export async function getChatHistory(req, res) {
 
 export async function createGroupChannel(req, res) {
   try {
-    const currentUserId = req.user._id.toString();
-    const { name, memberIds = [], image, topic, targetLanguage, nativeLanguage } = req.body;
+    const currentUserId = getUserId(req);
+    const {
+      name,
+      memberIds = [],
+      image,
+      topic,
+      targetLanguage,
+      nativeLanguage,
+      isPracticeGroup,
+    } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ message: "Group name is required" });
     }
 
+    const isPractice = isPracticeGroup !== false && Boolean(targetLanguage);
     const allMembers = Array.from(new Set([currentUserId, ...memberIds.map(String)]));
     const channelId = `group-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
@@ -130,19 +140,32 @@ export async function createGroupChannel(req, res) {
       created_by_id: currentUserId,
       members: allMembers,
       is_group: true,
-      topic: topic?.trim() || "Language Exchange & Conversation Practice",
-      targetLanguage: targetLanguage || "",
-      nativeLanguage: nativeLanguage || "",
+      is_practice: isPractice,
+      topic:
+        topic?.trim() ||
+        (isPractice
+          ? "Language Exchange & Conversation Practice"
+          : "General Group Discussion & Community"),
+      targetLanguage: isPractice ? (targetLanguage || "") : "",
+      nativeLanguage: isPractice ? (nativeLanguage || "") : "",
     });
 
     await channel.create();
     await channel.addModerators([currentUserId]);
 
-    // Send welcome system message
-    await channel.sendMessage({
-      text: `🎉 Welcome to ${name.trim()}! Start practicing together.`,
-      system: true,
-    });
+    // Send welcome message (without system: true so Stream sets last_message_at)
+    const welcomeText = isPractice
+      ? `🎉 Welcome to ${name.trim()}! Start practicing together.`
+      : `🎉 Welcome to ${name.trim()}! Glad to have everyone here.`;
+
+    try {
+      await channel.sendMessage({
+        text: welcomeText,
+        user_id: currentUserId,
+      });
+    } catch (msgError) {
+      console.warn("Could not send welcome message to channel:", msgError.message);
+    }
 
     res.status(201).json({
       success: true,
@@ -205,10 +228,15 @@ export async function addGroupMembers(req, res) {
     // Send a system message to notify the channel
     const addedUsers = await User.find({ _id: { $in: memberIds } }).select("fullName");
     const names = addedUsers.map((u) => u.fullName).join(", ") || "new members";
-    await channel.sendMessage({
-      text: `👋 ${names} joined the group!`,
-      system: true,
-    });
+    try {
+      await channel.sendMessage({
+        text: `👋 ${names} joined the group!`,
+        system: true,
+        user_id: userId,
+      });
+    } catch (msgError) {
+      console.warn("Could not send member joined message:", msgError.message);
+    }
 
     const updatedMemberIds = Object.keys(channel.state.members || {});
     const users = await User.find({ _id: { $in: updatedMemberIds } }).select("-password");
@@ -236,7 +264,15 @@ export async function removeGroupMember(req, res) {
       return res.status(404).json({ message: "Member not found in this group" });
     }
 
-    await channel.sendMessage({ text: `A member was removed from ${channel.data.name || "the group"}.`, system: true });
+    try {
+      await channel.sendMessage({
+        text: `A member was removed from ${channel.data.name || "the group"}.`,
+        system: true,
+        user_id: userId,
+      });
+    } catch (msgError) {
+      console.warn("Could not send member removed message:", msgError.message);
+    }
     await channel.removeMembers([String(memberId)]);
     res.status(200).json({ success: true });
   } catch (error) {
@@ -256,7 +292,15 @@ export async function leaveGroup(req, res) {
       return res.status(409).json({ message: "Promote another admin or delete the group before leaving" });
     }
 
-    await channel.sendMessage({ text: "A member left the group.", system: true });
+    try {
+      await channel.sendMessage({
+        text: "A member left the group.",
+        system: true,
+        user_id: userId,
+      });
+    } catch (msgError) {
+      console.warn("Could not send member left message:", msgError.message);
+    }
     await channel.removeMembers([userId]);
     res.status(200).json({ success: true });
   } catch (error) {
@@ -293,10 +337,15 @@ export async function updateGroupMemberRole(req, res) {
     }
 
     const user = await User.findById(memberId).select("fullName");
-    await channel.sendMessage({
-      text: `${user?.fullName || "A member"} is now a group ${role}.`,
-      system: true,
-    });
+    try {
+      await channel.sendMessage({
+        text: `${user?.fullName || "A member"} is now a group ${role}.`,
+        system: true,
+        user_id: userId,
+      });
+    } catch (msgError) {
+      console.warn("Could not send member role update message:", msgError.message);
+    }
     res.status(200).json({ success: true, role });
   } catch (error) {
     console.error("Error updating group member role:", error);

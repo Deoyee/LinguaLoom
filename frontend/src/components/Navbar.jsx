@@ -1,7 +1,7 @@
 import useAuthUser from "../hooks/useAuthUser";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { BellIcon, LogOutIcon, ChevronLeft, Menu, X, HomeIcon, UsersIcon, UserIcon } from "lucide-react";
+import { BellIcon, LogOutIcon, ChevronLeft, Menu, X, HomeIcon, UsersIcon, UserIcon, BookOpen } from "lucide-react";
 import useLogOut from "../hooks/useLogOut";
 import ThemeSelector from "./ThemeSelector.jsx";
 import Avatar from "./Avatar.jsx";
@@ -27,9 +27,10 @@ const Navbar = ({ showSidebar = false }) => {
 
   const navItems = [
     { name: "Home", path: "/", icon: HomeIcon },
+    { name: "Practice", path: "/practice", icon: BookOpen },
     { name: "Friends", path: "/friends", icon: UsersIcon },
     { name: "Notifications", path: "/notifications", icon: BellIcon, badge: friendRequestsCount },
-    { name: "Edit Profile", path: "/profile", icon: UserIcon },
+    { name: "Profile", path: "/profile", icon: UserIcon },
   ];
 
   return (
